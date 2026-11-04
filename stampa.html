@@ -27,7 +27,7 @@ main{padding:1.5rem clamp(1rem,4vw,3rem) 3rem;max-width:60rem}
 section{background:#fff;border-radius:12px;padding:1.25rem;margin-bottom:1.25rem}
 label{font-weight:600;color:var(--navy)}
 input,select,textarea,button{font:inherit;color:inherit}
-input:not([type=radio]),select,textarea{padding:.5rem .6rem;border:1px solid var(--navy);border-radius:6px;background:#fff;color:var(--ink)}
+input:not([type=radio]):not([type=checkbox]),select,textarea{padding:.5rem .6rem;border:1px solid var(--navy);border-radius:6px;background:#fff;color:var(--ink)}
 input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,summary:focus-visible,a:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
 button{cursor:pointer;border:2px solid var(--navy);background:#fff;color:var(--navy);padding:.5rem 1rem;border-radius:999px;font-weight:600}
 button:hover:not(:disabled){background:var(--sky)}
@@ -52,6 +52,10 @@ summary{cursor:pointer;font-weight:600;color:var(--navy)}
 @media(max-width:700px){.org{grid-template-columns:1fr}}
 textarea{width:100%;height:20rem;font-family:'Space Mono',monospace;font-size:.85rem}
 a.dl{display:inline-block;margin-top:.75rem;font-weight:600;color:var(--navy)}
+[hidden]{display:none!important}
+.inc{display:block;margin:0 0 .75rem;font-weight:400;color:var(--ink)}
+li label{font-weight:400;color:var(--ink)}
+.w{width:5rem;font-family:'Space Mono',monospace;text-align:center}
 </style>
 </head>
 <body>
@@ -75,7 +79,9 @@ a.dl{display:inline-block;margin-top:.75rem;font-weight:600;color:var(--navy)}
     <div class="mode">
       <label><input type="radio" name="m" value="banda" checked> Tutta la banda, secondo l’organico</label>
       <label><input type="radio" name="m" value="una"> Una singola parte</label>
+      <label><input type="radio" name="m" value="scelta"> Parti a scelta, con le copie per ogni strumento</label>
     </div>
+    <label id="inc" class="inc"><input type="checkbox" id="sc"> Includi partitura<span id="scn"></span></label>
     <div id="one" class="bar" hidden>
       <select id="sel" aria-label="Parte"></select>
       <label for="nc">Copie</label><input id="nc" type="number" min="1" value="1">
@@ -116,7 +122,7 @@ const ORG0 = {
 const $ = s => document.querySelector(s), low = s => s.toLowerCase().trim();
 const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const API = 'https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives';
-let tok, brani = [], cur = null, parts = [], score = null, seq = 0, lab = b => b.name;
+let tok, brani = [], cur = null, parts = [], score = null, seq = 0, want = {}, lab = b => b.name;
 $('#oc').value = ORG0.concerto; $('#om').value = ORG0.marce;
 
 // ---- Accesso (la sessione è condivisa con le altre pagine) ----
@@ -220,7 +226,7 @@ $('#bq').oninput = $('#bq').onchange = () => {
   else if (c.length > 1) $('#msg').textContent = 'Ci sono ' + c.length + ' brani con questo nome: scegli dall’elenco quello della cartella giusta.';
 };
 async function pick(b) {
-  const my = ++seq; cur = b; parts = []; score = null; $('#bcat').textContent = LBL[b.k]; $('#msg').textContent = 'Carico le parti…'; $('#link').innerHTML = '';
+  const my = ++seq; want = {}; cur = b; parts = []; score = null; $('#bcat').textContent = LBL[b.k]; $('#msg').textContent = 'Carico le parti…'; $('#link').innerHTML = '';
   try {
     const q = `'${b.id}' in parents and trashed=false`;
     const r = await g(`${API}&pageSize=200&orderBy=name&fields=files(id,name)&q=${encodeURIComponent(q)}`);
@@ -289,28 +295,46 @@ function calc() {
 const mode = () => document.querySelector('input[name=m]:checked').value;
 document.querySelectorAll('input[name=m]').forEach(r => r.onchange = show);
 $('#sel').onchange = $('#nc').oninput = () => show();
+const total = () => Object.values(want).reduce((a, b) => a + b, 0);
 function show() {
-  $('#one').hidden = mode() !== 'una';
+  const md = mode();
+  $('#one').hidden = md !== 'una'; $('#inc').hidden = md !== 'banda';
+  $('#sc').disabled = !score; $('#scn').textContent = cur && !score ? ' (non presente in questa cartella)' : '';
+  if (!score) $('#sc').checked = false;
   let h = '';
   if (cur && parts.length) {
-    if (mode() === 'banda') {
-      const c = calc(), tot = c.rows.reduce((s, r) => s + r.n, 0);
-      h = `<ol>${c.rows.map(r => `<li><span>${esc(r.p.name)}</span><span class="lead"></span><code>${r.n}</code></li>`).join('')}</ol>
+    if (md === 'banda') {
+      const c = calc(), inc = $('#sc').checked && score, tot = c.rows.reduce((s, r) => s + r.n, 0) + (inc ? 1 : 0);
+      h = `<ol>${inc ? '<li><span>Partitura</span><span class="lead"></span><code>1</code></li>' : ''}${c.rows.map(r => `<li><span>${esc(r.p.name)}</span><span class="lead"></span><code>${r.n}</code></li>`).join('')}</ol>
         <p class="mono">Totale: ${tot} copie</p>` +
         c.warn.map(w => `<p class="warn">${esc(w)}</p>`).join('') +
         (c.skip.length ? `<p class="hint">Non stampate perché non in organico: ${esc(c.skip.join(', '))}.</p>` : '');
-    } else h = `<p class="mono">${+$('#nc').value || 1} copie di ${esc($('#sel').selectedOptions[0] ? $('#sel').selectedOptions[0].text : '')}</p>`;
+    } else if (md === 'una') {
+      h = `<p class="mono">${+$('#nc').value || 1} copie di ${esc($('#sel').selectedOptions[0] ? $('#sel').selectedOptions[0].text : '')}</p>`;
+    } else {
+      h = `<ol>${[...(score ? [score] : []), ...parts].map(p => `<li><label for="w${p.id}">${esc(p.name)}</label><span class="lead"></span><input id="w${p.id}" class="w" type="number" min="0" value="${want[p.id] || 0}" data-id="${p.id}"></li>`).join('')}</ol>
+        <p class="mono" id="wt">Totale: ${total()} copie</p>`;
+    }
   }
   $('#res').innerHTML = h;
-  $('#go').disabled = !(tok && cur && parts.length);
+  $('#go').disabled = !(tok && cur && parts.length && (md !== 'scelta' || total() > 0));
 }
+$('#sc').onchange = show;
+$('#res').addEventListener('input', e => {
+  const t = e.target; if (!t.classList.contains('w')) return;
+  want[t.dataset.id] = Math.max(0, Math.floor(+t.value) || 0);
+  $('#wt').textContent = 'Totale: ' + total() + ' copie';
+  $('#go').disabled = !(tok && cur && parts.length && total() > 0);
+});
 
 // ---- PDF da stampare ----
 $('#go').onclick = async () => {
   const log = m => { $('#log').textContent += m + '\n'; };
   $('#log').textContent = ''; $('#link').innerHTML = ''; $('#go').disabled = true;
   try {
-    const items = mode() === 'banda' ? calc().rows.map(r => ({id: r.p.id, n: r.n, name: r.p.name}))
+    const md = mode(), all = [...(score ? [score] : []), ...parts];
+    const items = md === 'banda' ? [...($('#sc').checked && score ? [{id: score.id, n: 1, name: 'Partitura'}] : []), ...calc().rows.map(r => ({id: r.p.id, n: r.n, name: r.p.name}))]
+      : md === 'scelta' ? all.filter(p => want[p.id] > 0).map(p => ({id: p.id, n: want[p.id], name: p.name}))
       : [{id: $('#sel').value, n: Math.max(1, +$('#nc').value || 1), name: $('#sel').selectedOptions[0].text}];
     const out = await PDFLib.PDFDocument.create();
     for (const it of items) {
