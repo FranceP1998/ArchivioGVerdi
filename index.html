@@ -67,7 +67,7 @@ textarea{height:16rem;font-family:'Space Mono',monospace;font-size:.85rem;margin
   <section>
     <h2>Brano</h2>
     <div class="two">
-      <div><label for="tit">Titolo</label><input id="tit" placeholder="Moment for Morricone"></div>
+      <div><label for="tit">Titolo</label><input id="tit" placeholder="Titolo del brano"></div>
       <div><label for="cat">Cartella</label>
         <select id="cat"><option value="concerto">Brani da concerto</option><option value="marce">Marce</option></select>
       </div>
@@ -88,10 +88,11 @@ textarea{height:16rem;font-family:'Space Mono',monospace;font-size:.85rem;margin
 
     <details style="margin-top:1.5rem">
       <summary>Ordine classico degli strumenti</summary>
-      <p class="hint">Una riga per strumento. Per aggiungere uno strumento inserisci una riga dove vuoi. I nomi devono coincidere con quelli usati nelle parti.</p>
+      <p class="hint">Una riga per strumento. Per aggiungere uno strumento inserisci una riga dove vuoi. I nomi devono coincidere con quelli usati nelle parti. Quando salvi, l’ordine vale per tutta la banda.</p>
       <textarea id="ord" spellcheck="false"></textarea>
       <button id="saveord" type="button">Salva ordine</button>
       <button id="reset" type="button">Ripristina predefinito</button>
+      <p id="ordmsg" class="hint"></p>
     </details>
   </section>
 </main>
@@ -126,11 +127,41 @@ const DEF = ['Ottavino', ...N('Flauto', 2), 'Flauto 1 e 2', 'Flauto', ...D('Oboe
 let tok, pdf, total = 0, rows = [{n: '', a: 1, b: 1}];
 
 // Ordine strumenti
-try { $('#ord').value = localStorage.getItem('ordine') || DEF.join('\n'); } catch (e) { $('#ord').value = DEF.join('\n'); }
+$('#ord').value = DEF.join('\n');
 const order = () => $('#ord').value.split('\n').map(s => s.trim()).filter(Boolean);
 function fillList() { $('#dl').innerHTML = [...order(), 'Partitura'].map(s => `<option value="${esc(s)}">`).join(''); }
-$('#saveord').onclick = () => { try { localStorage.setItem('ordine', $('#ord').value); } catch (e) {} fillList(); sum(); };
-$('#reset').onclick = () => { $('#ord').value = DEF.join('\n'); $('#saveord').click(); };
+const CFGNAME = 'ordine-strumenti.json', msg = t => { $('#ordmsg').textContent = t; };
+let cfgId, cfgParent;
+async function loadOrder() {
+  try {
+    cfgParent = (await g(`https://www.googleapis.com/drive/v3/files/${CFG.FOLDERS.concerto}?fields=parents&supportsAllDrives=true`)).parents[0];
+    const q = `'${cfgParent}' in parents and name='${CFGNAME}' and trashed=false`;
+    const r = await g(`https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives&fields=files(id)&q=${encodeURIComponent(q)}`);
+    if (r.files.length) {
+      cfgId = r.files[0].id;
+      $('#ord').value = (await g(`https://www.googleapis.com/drive/v3/files/${cfgId}?alt=media&supportsAllDrives=true`)).join('\n');
+      msg('Ordine della banda caricato dal Drive.');
+    } else msg('Nessun ordine salvato sul Drive: è quello predefinito.');
+  } catch (e) { msg('Non riesco a leggere l’ordine dal Drive: ' + e.message); }
+  fillList(); sum();
+}
+async function saveOrder() {
+  if (!tok) { msg('Accedi con Google per salvare l’ordine per tutta la banda.'); return; }
+  const body = JSON.stringify(order());
+  try {
+    if (cfgId) await g(`https://www.googleapis.com/upload/drive/v3/files/${cfgId}?uploadType=media&supportsAllDrives=true`, {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body});
+    else {
+      const f = new FormData();
+      f.append('metadata', new Blob([JSON.stringify({name: CFGNAME, parents: [cfgParent]})], {type: 'application/json'}));
+      f.append('file', new Blob([body], {type: 'application/json'}));
+      cfgId = (await g('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id', {method: 'POST', body: f})).id;
+    }
+    msg('Ordine salvato per tutta la banda.');
+  } catch (e) { msg('Non sono riuscito a salvare: ' + e.message); }
+  fillList(); sum();
+}
+$('#saveord').onclick = saveOrder;
+$('#reset').onclick = () => { if (confirm('Ripristinare l’ordine predefinito per tutta la banda?')) { $('#ord').value = DEF.join('\n'); saveOrder(); } };
 
 function key(n, L) {
   let i = L.indexOf(n);
@@ -143,7 +174,7 @@ function key(n, L) {
 // Righe delle parti
 function draw() {
   $('#rows').innerHTML = rows.map((r, i) => `<div class="row">
-    <input list="dl" value="${esc(r.n)}" data-i="${i}" data-f="n" placeholder="Flauto 1" aria-label="Strumento">
+    <input list="dl" value="${esc(r.n)}" data-i="${i}" data-f="n" placeholder="Strumento" aria-label="Strumento">
     <input type="number" min="1" value="${r.a}" data-i="${i}" data-f="a" aria-label="Da pagina">
     <input type="number" min="1" value="${r.b}" data-i="${i}" data-f="b" aria-label="A pagina">
     <button data-del="${i}" aria-label="Rimuovi la riga">✕</button></div>`).join('');
@@ -196,8 +227,8 @@ async function cut(a, b) {
 $('#login').onclick = () => {
   if (!window.google) { $('#st').textContent = 'Servizio Google non raggiungibile'; return; }
   google.accounts.oauth2.initTokenClient({
-    client_id: CFG.CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive', hd: 'corpomusicalegverdi.it',
-    callback: r => { if (r.access_token) { tok = r.access_token; $('#st').textContent = 'Connesso'; $('#st').className = 'on'; sum(); } }
+    client_id: CFG.CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive openid profile', hd: 'corpomusicalegverdi.it',
+    callback: async r => { if (r.access_token) { tok = r.access_token; $('#st').textContent = 'Connesso'; $('#st').className = 'on'; sum(); try { const u = await g('https://www.googleapis.com/oauth2/v3/userinfo'); $('#st').textContent = 'Ciao ' + (u.given_name || u.name || ''); } catch (e) {} loadOrder(); } }
   }).requestAccessToken();
 };
 async function g(url, opt = {}) {
