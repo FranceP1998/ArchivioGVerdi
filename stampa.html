@@ -218,12 +218,13 @@ async function pick(b) {
     const q = `'${b.id}' in parents and trashed=false`;
     const r = await g(`${API}&pageSize=200&orderBy=name&fields=files(id,name)&q=${encodeURIComponent(q)}`);
     const pre = low(b.name + ' - ');
-    const fl = r.files.map(f => { let n = f.name.replace(/\.pdf$/i, ''); if (low(n).startsWith(pre)) n = n.slice(pre.length); return {id: f.id, name: n}; });
-    score = fl.find(p => /^partitura$/i.test(p.name)) || null;
-    parts = fl.filter(p => !/^(parti|partitura)$/i.test(p.name)).map(p => { const m = p.name.match(/^(\d+)\s+(.+)$/); return m ? {id: p.id, num: +m[1], name: m[2]} : null; })
+    const fl = r.files.map(f => { let n = f.name.replace(/\.pdf$/i, '').trim(); if (low(n).startsWith(pre)) n = n.slice(pre.length).trim(); return {id: f.id, name: n}; });
+    const tail = /(^|\s-\s)(parti|partitura)$/i, sc = fl.find(p => /(^|\s-\s)partitura$/i.test(p.name));
+    score = sc ? {id: sc.id, name: 'Partitura'} : null;
+    parts = fl.filter(p => !tail.test(p.name)).map(p => { const m = p.name.match(/^(?:.*? - )?(\d+)\s+(.+)$/); return m ? {id: p.id, num: +m[1], name: m[2].trim()} : null; })
       .filter(Boolean).sort((a, c) => a.num - c.num);
     $('#sel').innerHTML = [...parts, ...(score ? [score] : [])].map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
-    $('#msg').textContent = parts.length + ' parti trovate.';
+    $('#msg').textContent = parts.length + ' parti trovate.' + (parts.length ? '' : fl.length ? ' Non riconosco i nomi dei file, ad esempio «' + fl[0].name + '».' : ' La cartella è vuota.');
   } catch (e) { $('#msg').textContent = 'Errore: ' + e.message; }
   show();
 }
