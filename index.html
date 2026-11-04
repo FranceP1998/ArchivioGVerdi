@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Divisione PDF · Archivio spartiti</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Karla:wght@400;600&family=Piazzolla:wght@500;700&family=Space+Mono&display=swap">
+<style>
+:root{--bg:#f4f5f2;--ink:#17231d;--mut:#5d6b63;--line:#cfd6cf;--acc:#1f4d3a;--tint:#e6ede7;--err:#a3321f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Karla,sans-serif}
+h1,h2{font-family:Piazzolla,serif;margin:0;font-weight:700}
+h1{font-size:2rem}h2{font-size:1.2rem;margin-bottom:.6rem}
+header{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;padding:1.25rem clamp(1rem,4vw,3rem);border-bottom:1px solid var(--line)}
+header p{margin:0;color:var(--mut)}
+main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:1.5rem;padding:1.5rem clamp(1rem,4vw,3rem)}
+@media(max-width:860px){main{grid-template-columns:1fr}}
+section{margin-bottom:1.5rem}
+label{display:block;font-weight:600;margin-bottom:.25rem}
+input,select,textarea,button{font:inherit;color:inherit}
+input,select,textarea{width:100%;padding:.5rem .6rem;border:1px solid var(--line);border-radius:6px;background:#fff}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+button{cursor:pointer;border:1px solid var(--acc);background:#fff;color:var(--acc);padding:.5rem .9rem;border-radius:6px;font-weight:600}
+button.main{background:var(--acc);color:#fff}
+button:disabled{opacity:.45;cursor:not-allowed}
+.two{display:grid;grid-template-columns:2fr 1fr;gap:.75rem}
+.row{display:grid;grid-template-columns:1fr 5rem 5rem 2.5rem;gap:.4rem;margin-bottom:.4rem}
+.row input[type=number]{font-family:'Space Mono',monospace;text-align:center}
+.row button{padding:.3rem;border-color:var(--line);color:var(--mut)}
+.cap{display:grid;grid-template-columns:1fr 5rem 5rem 2.5rem;gap:.4rem;color:var(--mut);font-size:.875rem}
+iframe{width:100%;height:78vh;border:1px solid var(--line);border-radius:6px;background:#fff}
+ol{list-style:none;margin:0;padding:0}
+li{display:flex;align-items:baseline;gap:.5rem;padding:.2rem 0}
+li .lead{flex:1;border-bottom:1px dotted var(--mut);transform:translateY(-.25rem)}
+li code,pre,#st,#tot{font-family:'Space Mono',monospace;font-size:.85rem}
+li.bad{color:var(--err)}li em{color:var(--err);font-size:.85rem}
+pre{white-space:pre-wrap;color:var(--mut);margin:.75rem 0 0}
+details{border:1px solid var(--line);border-radius:6px;padding:.6rem .8rem;background:#fff}
+summary{cursor:pointer;font-weight:600}
+textarea{height:16rem;font-family:'Space Mono',monospace;font-size:.85rem;margin:.6rem 0}
+.hint{color:var(--mut);font-size:.9rem;margin:.25rem 0 .75rem}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Divisione PDF</h1>
+    <p>Archivio spartiti · Corpo Musicale G. Verdi</p>
+  </div>
+  <div>
+    <span id="st">Non connesso</span>
+    <button id="login">Accedi con Google</button>
+  </div>
+</header>
+
+<main>
+  <section>
+    <h2>PDF da dividere</h2>
+    <input type="file" id="f" accept="application/pdf" aria-label="Scegli il PDF">
+    <p class="hint"><span id="tot">Nessun file</span></p>
+    <iframe id="pv" title="Anteprima del PDF"></iframe>
+  </section>
+
+  <section>
+    <h2>Brano</h2>
+    <div class="two">
+      <div><label for="tit">Titolo</label><input id="tit" placeholder="Moment for Morricone"></div>
+      <div><label for="cat">Cartella</label>
+        <select id="cat"><option value="concerto">Brani da concerto</option><option value="marce">Marce</option></select>
+      </div>
+    </div>
+
+    <h2 style="margin-top:1.5rem">Parti nell’ordine del PDF</h2>
+    <p class="hint">Scrivi gli strumenti come compaiono nel PDF. Vengono riordinati da soli secondo l’ordine classico. Per le percussioni scrivi «Percussioni - Glockenspiel». Per la partitura scrivi «Partitura».</p>
+    <div class="cap"><span>Strumento</span><span>Da pag.</span><span>A pag.</span><span></span></div>
+    <div id="rows"></div>
+    <button id="add" type="button">Aggiungi parte</button>
+    <datalist id="dl"></datalist>
+
+    <h2 style="margin-top:1.5rem">File che verranno creati</h2>
+    <ol id="out"></ol>
+
+    <p style="margin-top:1rem"><button id="go" class="main" disabled>Dividi e carica sul Drive</button></p>
+    <pre id="log"></pre>
+
+    <details style="margin-top:1.5rem">
+      <summary>Ordine classico degli strumenti</summary>
+      <p class="hint">Una riga per strumento. Per aggiungere uno strumento inserisci una riga dove vuoi. I nomi devono coincidere con quelli usati nelle parti.</p>
+      <textarea id="ord" spellcheck="false"></textarea>
+      <button id="saveord" type="button">Salva ordine</button>
+      <button id="reset" type="button">Ripristina predefinito</button>
+    </details>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+// ---- Da compilare una sola volta ----
+const CFG = {
+  CLIENT_ID: 'INSERISCI_CLIENT_ID.apps.googleusercontent.com',
+  FOLDERS: {
+    concerto: 'INSERISCI_ID_CARTELLA_BRANI_DA_CONCERTO',
+    marce: 'INSERISCI_ID_CARTELLA_MARCE'
+  }
+};
+// -------------------------------------
+
+const $ = s => document.querySelector(s), pad = n => String(n).padStart(2, '0');
+const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const N = (b, k) => Array.from({length: k}, (_, i) => b + ' ' + (i + 1));
+const T = (b, ps, ts) => ts.flatMap(t => ps.map(p => (p ? b + ' ' + p : b) + ' in ' + t));
+const TON = ['C BC', 'C TC', 'Bb BC', 'Bb TC', 'Eb BC', 'Eb TC'];
+const DEF = ['Ottavino', ...N('Flauto', 2), 'Flauto 1 e 2', 'Flauto', 'Clarinetto in Eb', ...N('Clarinetto', 3), 'Clarinetto', 'Clarinetto basso',
+  'Sax Soprano', ...N('Sax Contralto', 2), 'Sax Contralto', ...N('Sax Tenore', 2), 'Sax Tenore', 'Sax Baritono',
+  ...N('Flicorno', 3), 'Flicorno', ...N('Cornetta', 3), 'Cornetta', ...N('Tromba', 4), 'Tromba',
+  ...T('Corno', ['1','2','3','4',''], ['F','Eb','Bb']),
+  'Eufonio in C BC', 'Eufonio in Bb TC', 'Eufonio in C TC', 'Eufonio in Bb BC',
+  ...T('Trombone', ['1','2','3','Basso',''], TON), ...T('Tuba', ['1','2','1 e 2',''], TON),
+  'Contrabbasso', 'Pianoforte', 'Percussioni'];
+
+let tok, pdf, total = 0, rows = [{n: '', a: 1, b: 1}];
+
+// Ordine strumenti
+try { $('#ord').value = localStorage.getItem('ordine') || DEF.join('\n'); } catch (e) { $('#ord').value = DEF.join('\n'); }
+const order = () => $('#ord').value.split('\n').map(s => s.trim()).filter(Boolean);
+function fillList() { $('#dl').innerHTML = [...order(), 'Partitura'].map(s => `<option value="${esc(s)}">`).join(''); }
+$('#saveord').onclick = () => { try { localStorage.setItem('ordine', $('#ord').value); } catch (e) {} fillList(); sum(); };
+$('#reset').onclick = () => { $('#ord').value = DEF.join('\n'); $('#saveord').click(); };
+
+function key(n, L) {
+  let i = L.indexOf(n);
+  if (i >= 0) return i;
+  if (n.startsWith('Percussioni')) return L.indexOf('Percussioni');
+  if (n.endsWith(' Solo')) { const b = n.slice(0, -5); i = L.indexOf(b + ' 1'); if (i < 0) i = L.indexOf(b); if (i >= 0) return i - .5; }
+  return 9999;
+}
+
+// Righe delle parti
+function draw() {
+  $('#rows').innerHTML = rows.map((r, i) => `<div class="row">
+    <input list="dl" value="${esc(r.n)}" data-i="${i}" data-f="n" placeholder="Flauto 1" aria-label="Strumento">
+    <input type="number" min="1" value="${r.a}" data-i="${i}" data-f="a" aria-label="Da pagina">
+    <input type="number" min="1" value="${r.b}" data-i="${i}" data-f="b" aria-label="A pagina">
+    <button data-del="${i}" aria-label="Rimuovi la riga">✕</button></div>`).join('');
+  sum();
+}
+$('#rows').addEventListener('input', e => { const t = e.target, i = +t.dataset.i; rows[i][t.dataset.f] = t.dataset.f === 'n' ? t.value.trim() : +t.value; sum(); });
+$('#rows').addEventListener('click', e => { if (e.target.dataset.del !== undefined) { rows.splice(+e.target.dataset.del, 1); if (!rows.length) rows.push({n: '', a: 1, b: 1}); draw(); } });
+$('#add').onclick = () => { const l = rows[rows.length - 1], s = l && l.b ? l.b + 1 : 1; rows.push({n: '', a: s, b: s}); draw(); };
+$('#tit').oninput = () => sum();
+
+// Piano dei file: riordino secondo l'ordine classico e numerazione progressiva
+function plan() {
+  const L = order(), t = $('#tit').value.trim(), ok = rows.filter(r => r.n);
+  const parts = ok.filter(r => r.n !== 'Partitura').map((r, i) => ({...r, i, k: key(r.n, L)}))
+    .sort((x, y) => x.k - y.k || x.i - y.i).map((r, j) => ({...r, file: `${t} - ${pad(j + 1)} ${r.n}`}));
+  const sc = ok.find(r => r.n === 'Partitura');
+  const all = [...parts];
+  if (parts.length) all.push({n: 'Parti', file: `${t} - Parti`, merged: 1});
+  if (sc) all.push({...sc, file: `${t} - Partitura`});
+  return {parts, sc, all};
+}
+const bad = r => !(r.a >= 1 && r.b >= r.a && r.b <= total);
+function sum() {
+  const p = plan();
+  $('#out').innerHTML = p.all.map(r => `<li class="${!r.merged && bad(r) ? 'bad' : ''}"><span>${esc(r.file)}</span>${r.k === 9999 ? '<em>fuori elenco</em>' : ''}<span class="lead"></span><code>${r.merged ? 'tutte le parti' : r.a === r.b ? 'p. ' + r.a : 'p. ' + r.a + '–' + r.b}</code></li>`).join('');
+  const chk = [...p.parts, ...(p.sc ? [p.sc] : [])];
+  $('#go').disabled = !(tok && pdf && $('#tit').value.trim() && p.parts.length && !chk.some(bad));
+  return p;
+}
+
+// PDF di partenza
+$('#f').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    pdf = await PDFLib.PDFDocument.load(await f.arrayBuffer(), {ignoreEncryption: true});
+    total = pdf.getPageCount();
+    $('#pv').src = URL.createObjectURL(f);
+    $('#tot').textContent = total + ' pagine';
+    if (!$('#tit').value) $('#tit').value = f.name.replace(/\.pdf$/i, '');
+  } catch (err) { pdf = null; $('#tot').textContent = 'Impossibile aprire il PDF'; }
+  sum();
+};
+async function cut(a, b) {
+  const d = await PDFLib.PDFDocument.create();
+  (await d.copyPages(pdf, Array.from({length: b - a + 1}, (_, i) => a - 1 + i))).forEach(x => d.addPage(x));
+  return d;
+}
+
+// Google Drive
+$('#login').onclick = () => {
+  if (!window.google) { $('#st').textContent = 'Servizio Google non raggiungibile'; return; }
+  google.accounts.oauth2.initTokenClient({
+    client_id: CFG.CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive', hd: 'corpomusicalegverdi.it',
+    callback: r => { if (r.access_token) { tok = r.access_token; $('#st').textContent = 'Connesso'; sum(); } }
+  }).requestAccessToken();
+};
+async function g(url, opt = {}) {
+  const r = await fetch(url, {...opt, headers: {...(opt.headers || {}), Authorization: 'Bearer ' + tok}});
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+async function up(name, bytes, parent) {
+  const f = new FormData();
+  f.append('metadata', new Blob([JSON.stringify({name, parents: [parent]})], {type: 'application/json'}));
+  f.append('file', new Blob([bytes], {type: 'application/pdf'}));
+  return g('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true', {method: 'POST', body: f});
+}
+
+$('#go').onclick = async () => {
+  const p = plan(), t = $('#tit').value.trim(), log = m => { $('#log').textContent += m + '\n'; };
+  $('#log').textContent = ''; $('#go').disabled = true;
+  try {
+    const parent = CFG.FOLDERS[$('#cat').value];
+    const q = `'${parent}' in parents and name='${t.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}' and trashed=false`;
+    const ex = await g(`https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives&q=${encodeURIComponent(q)}`);
+    if (ex.files.length) throw new Error(`Esiste già una cartella «${t}».`);
+    const folder = await g('https://www.googleapis.com/drive/v3/files?supportsAllDrives=true', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name: t, mimeType: 'application/vnd.google-apps.folder', parents: [parent]})
+    });
+    log('Cartella creata');
+    const docs = [];
+    for (const r of p.parts) {
+      const d = await cut(r.a, r.b); docs.push(d);
+      await up(r.file + '.pdf', await d.save(), folder.id); log('✓ ' + r.file);
+    }
+    const m = await PDFLib.PDFDocument.create();
+    for (const d of docs) (await m.copyPages(d, d.getPageIndices())).forEach(x => m.addPage(x));
+    await up(`${t} - Parti.pdf`, await m.save(), folder.id); log(`✓ ${t} - Parti`);
+    if (p.sc) { await up(`${t} - Partitura.pdf`, await (await cut(p.sc.a, p.sc.b)).save(), folder.id); log(`✓ ${t} - Partitura`); }
+    log('Fatto.');
+  } catch (e) { log('Errore: ' + e.message); }
+  sum();
+};
+
+fillList(); draw();
+</script>
+</body>
+</html>
