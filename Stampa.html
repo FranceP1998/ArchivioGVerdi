@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stampa · Archivio spartiti</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Karla:wght@400;600&family=Piazzolla:wght@500;700&family=Space+Mono&display=swap">
+<style>
+:root{--navy:#1E1937;--orange:#EF7135;--green:#008367;--wine:#620E1C;--cream:#F6E1C9;--gold:#F0BC0F;--sage:#7EA681;--sky:#BBDEF5;--ink:#1C1C1F}
+*{box-sizing:border-box}
+body{margin:0;background:var(--cream);color:var(--ink);font:16px/1.55 Karla,sans-serif}
+h1,h2{font-family:Piazzolla,serif;margin:0;font-weight:700;color:var(--navy)}
+h1{font-size:clamp(2rem,5vw,3rem);color:var(--cream);line-height:1.1}
+h2{font-size:1.3rem;margin-bottom:.6rem}
+header{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;padding:.9rem clamp(1rem,4vw,3rem);background:#fff;border-bottom:4px solid var(--orange)}
+.logo{display:block;height:48px;width:auto;max-width:100%}
+.acc{display:flex;align-items:center;gap:.75rem}
+.nav{display:flex;gap:1.25rem}
+.nav a{color:var(--navy);font-weight:600;text-decoration:none;padding:.25rem 0;border-bottom:3px solid transparent}
+.nav a[aria-current]{border-bottom-color:var(--orange)}
+.nav a:hover{border-bottom-color:var(--sage)}
+#st{padding:.2rem .7rem;border-radius:999px;background:var(--sky);color:var(--navy);font-family:'Space Mono',monospace;font-size:.85rem}
+#st.on{background:var(--green);color:#fff}
+.band{background:var(--navy);padding:2rem clamp(1rem,4vw,3rem) 2.25rem}
+.band p{margin:.4rem 0 0;color:var(--cream);font-size:1.1rem}
+main{padding:1.5rem clamp(1rem,4vw,3rem) 3rem;max-width:60rem}
+section{background:#fff;border-radius:12px;padding:1.25rem;margin-bottom:1.25rem}
+label{font-weight:600;color:var(--navy)}
+input,select,textarea,button{font:inherit;color:inherit}
+input:not([type=radio]),select,textarea{padding:.5rem .6rem;border:1px solid var(--navy);border-radius:6px;background:#fff;color:var(--ink)}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,summary:focus-visible,a:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+button{cursor:pointer;border:2px solid var(--navy);background:#fff;color:var(--navy);padding:.5rem 1rem;border-radius:999px;font-weight:600}
+button:hover:not(:disabled){background:var(--sky)}
+button.main{background:var(--orange);border-color:var(--orange)}
+button.main:hover:not(:disabled){background:var(--gold);border-color:var(--gold)}
+button:disabled{background:var(--cream);border-color:var(--cream);cursor:not-allowed}
+.bar{display:flex;gap:.75rem;flex-wrap:wrap;align-items:center}
+.bar input[type=search]{flex:1;min-width:14rem}
+.bar input[type=number]{width:5rem;font-family:'Space Mono',monospace;text-align:center}
+.mode{display:flex;gap:1.5rem;flex-wrap:wrap;margin-bottom:.75rem}
+.mode label{font-weight:400;color:var(--ink)}
+ol{list-style:none;margin:0;padding:0}
+li{display:flex;align-items:baseline;gap:.5rem;padding:.2rem 0}
+li .lead{flex:1;border-bottom:1px dotted var(--navy);transform:translateY(-.25rem)}
+li code,pre,.mono{font-family:'Space Mono',monospace;font-size:.85rem}
+.warn{color:var(--wine);font-weight:600;margin:.5rem 0}
+.hint{font-size:.9rem;margin:.25rem 0 .75rem}
+pre{white-space:pre-wrap;margin:.75rem 0 0}
+details{border:1px solid var(--navy);border-radius:8px;padding:.6rem .8rem}
+summary{cursor:pointer;font-weight:600;color:var(--navy)}
+.org{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:.75rem 0}
+@media(max-width:700px){.org{grid-template-columns:1fr}}
+textarea{width:100%;height:20rem;font-family:'Space Mono',monospace;font-size:.85rem}
+a.dl{display:inline-block;margin-top:.75rem;font-weight:600;color:var(--navy)}
+</style>
+</head>
+<body>
+<header>
+  <a href="https://www.corpomusicalegverdi.it/"><img class="logo" src="https://www.corpomusicalegverdi.it/wp-content/uploads/2026/01/Marchio-Ufficiale-Orizzontale.svg" alt="Corpo Musicale “G. Verdi” di Venaria Reale"></a>
+  <nav class="nav"><a href="archivio.html">Archivio</a><a href="stampa.html" aria-current="page">Stampa</a><a href="divisione.html">Divisione PDF</a></nav>
+  <div class="acc"><span id="st">Non connesso</span><button id="login">Accedi con Google</button></div>
+</header>
+<div class="band"><h1>Stampa</h1><p>Le copie giuste per ogni strumento, secondo l’organico</p></div>
+
+<main>
+  <section>
+    <h2>Brano</h2>
+    <div class="bar"><input id="bq" type="search" list="dlb" placeholder="Titolo del brano" aria-label="Titolo del brano"><span id="bcat" class="mono"></span></div>
+    <datalist id="dlb"></datalist>
+    <p id="msg" class="hint">Accedi con Google per scegliere un brano.</p>
+  </section>
+
+  <section>
+    <h2>Cosa stampare</h2>
+    <div class="mode">
+      <label><input type="radio" name="m" value="banda" checked> Tutta la banda, secondo l’organico</label>
+      <label><input type="radio" name="m" value="una"> Una singola parte</label>
+    </div>
+    <div id="one" class="bar" hidden>
+      <select id="sel" aria-label="Parte"></select>
+      <label for="nc">Copie</label><input id="nc" type="number" min="1" value="1">
+    </div>
+    <div id="res"></div>
+    <p><button id="go" class="main" disabled>Prepara il PDF</button></p>
+    <pre id="log"></pre>
+    <div id="link"></div>
+  </section>
+
+  <section>
+    <details>
+      <summary>Organico della banda</summary>
+      <p class="hint">Una riga per ruolo, con il numero di musici davanti, per esempio «2 flauto 1». Quando salvi, vale per tutta la banda.</p>
+      <div class="org">
+        <div><label for="oc">Brani da concerto</label><textarea id="oc" spellcheck="false"></textarea></div>
+        <div><label for="om">Marce</label><textarea id="om" spellcheck="false"></textarea></div>
+      </div>
+      <button id="saveorg" type="button">Salva organico</button>
+      <p id="orgmsg" class="hint"></p>
+    </details>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+const CFG = {
+  CLIENT_ID: '461215269916-tcd8cfsa5m951ohohibf4f8635tdgolp.apps.googleusercontent.com',
+  FOLDERS: {concerto: '1wWMSp-kyX2K6Kk1hJfuv3gISgkoQBX4V', marce: '1M0-uSG4jsO-P6SG-MY1MoNd_aAppM8Dp'}
+};
+const LBL = {concerto: 'Brani da concerto', marce: 'Marce'};
+const COMUNE = '1 corno 1\n1 corno 2\n1 corno 3\n1 corno 4\n2 tromba 1\n1 tromba 2\n2 tromba 3\n1 trombone 1\n1 trombone 2\n1 trombone 3\n1 eufonio\n4 tuba';
+const ORG0 = {
+  concerto: '1 oboe\n2 flauto 1\n2 flauto 2\n3 clarinetto 1\n4 clarinetto 2\n4 clarinetto 3\n2 sax contralto 1\n2 sax contralto 2\n3 sax tenore\n1 sax baritono\n' + COMUNE,
+  marce: '2 flauto 1\n2 flauto 2\n5 clarinetto 1\n3 clarinetto 2\n3 clarinetto 3\n2 sax contralto 1\n2 sax contralto 2\n4 sax tenore\n1 sax baritono\n' + COMUNE
+};
+const $ = s => document.querySelector(s), low = s => s.toLowerCase().trim();
+const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const API = 'https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives';
+let tok, brani = [], cur = null, parts = [], score = null;
+$('#oc').value = ORG0.concerto; $('#om').value = ORG0.marce;
+
+// ---- Accesso (la sessione è condivisa con le altre pagine) ----
+const SS = {
+  get: k => { try { return sessionStorage.getItem(k); } catch (e) { return null; } },
+  set: (k, v) => { try { sessionStorage.setItem(k, v); } catch (e) {} },
+  del: k => { try { sessionStorage.removeItem(k); } catch (e) {} }
+};
+function connected(name) {
+  $('#st').textContent = name ? 'Ciao ' + name : 'Connesso'; $('#st').className = 'on';
+  $('#login').hidden = true; start();
+}
+function expired() {
+  tok = null; SS.del('sess'); $('#st').textContent = 'Sessione scaduta'; $('#st').className = ''; $('#login').hidden = false;
+}
+$('#login').onclick = () => {
+  if (!window.google) { $('#st').textContent = 'Servizio Google non raggiungibile'; return; }
+  let hint; try { hint = localStorage.getItem('hint') || undefined; } catch (e) {}
+  google.accounts.oauth2.initTokenClient({
+    client_id: CFG.CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive openid profile', hd: 'corpomusicalegverdi.it', login_hint: hint,
+    callback: async r => {
+      if (!r.access_token) return;
+      tok = r.access_token; let name = '';
+      try {
+        const u = await g('https://www.googleapis.com/oauth2/v3/userinfo');
+        name = u.given_name || u.name || '';
+        try { localStorage.setItem('hint', u.email); } catch (e) {}
+      } catch (e) {}
+      SS.set('sess', JSON.stringify({t: tok, n: name, e: Date.now() + ((Number(r.expires_in) || 3600) - 120) * 1000}));
+      connected(name);
+    }
+  }).requestAccessToken();
+};
+async function raw(url, opt = {}) {
+  const r = await fetch(url, {...opt, headers: {...(opt.headers || {}), Authorization: 'Bearer ' + tok}});
+  if (r.status === 401) { expired(); throw new Error('Sessione scaduta: accedi di nuovo con Google.'); }
+  if (!r.ok) throw new Error(await r.text());
+  return r;
+}
+const g = async (u, o) => (await raw(u, o)).json();
+const gb = async u => (await raw(u)).arrayBuffer();
+try { const s0 = JSON.parse(SS.get('sess')); if (s0 && s0.e > Date.now()) { tok = s0.t; window.addEventListener('load', () => connected(s0.n)); } } catch (e) {}
+
+// ---- Configurazione condivisa sul Drive (organico) ----
+const CF = {}; let parent;
+async function parentId() {
+  if (!parent) parent = (await g(`https://www.googleapis.com/drive/v3/files/${CFG.FOLDERS.concerto}?fields=parents&supportsAllDrives=true`)).parents[0];
+  return parent;
+}
+async function loadCfg(name) {
+  const q = `'${await parentId()}' in parents and name='${name}' and trashed=false`;
+  const r = await g(`${API}&fields=files(id)&q=${encodeURIComponent(q)}`);
+  if (!r.files.length) return null;
+  CF[name] = r.files[0].id;
+  return g(`https://www.googleapis.com/drive/v3/files/${CF[name]}?alt=media&supportsAllDrives=true`);
+}
+async function saveCfg(name, obj) {
+  const body = JSON.stringify(obj);
+  if (CF[name]) return g(`https://www.googleapis.com/upload/drive/v3/files/${CF[name]}?uploadType=media&supportsAllDrives=true`, {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body});
+  const f = new FormData();
+  f.append('metadata', new Blob([JSON.stringify({name, parents: [await parentId()]})], {type: 'application/json'}));
+  f.append('file', new Blob([body], {type: 'application/json'}));
+  CF[name] = (await g('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id', {method: 'POST', body: f})).id;
+}
+$('#saveorg').onclick = async () => {
+  try { await saveCfg('organico.json', {concerto: $('#oc').value, marce: $('#om').value}); $('#orgmsg').textContent = 'Organico salvato per tutta la banda.'; }
+  catch (e) { $('#orgmsg').textContent = 'Non sono riuscito a salvare: ' + e.message; }
+};
+$('#oc').oninput = $('#om').oninput = () => show();
+
+// ---- Elenco brani e parti ----
+async function start() {
+  $('#msg').textContent = 'Carico i brani…';
+  try {
+    const o = await loadCfg('organico.json');
+    if (o) { $('#oc').value = o.concerto; $('#om').value = o.marce; }
+  } catch (e) { $('#orgmsg').textContent = 'Organico del Drive non letto: ' + e.message; }
+  try {
+    brani = [];
+    for (const k of Object.keys(CFG.FOLDERS)) {
+      let pt = '';
+      do {
+        const q = `'${CFG.FOLDERS[k]}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+        const r = await g(`${API}&pageSize=1000&orderBy=name&fields=nextPageToken,files(id,name)&q=${encodeURIComponent(q)}${pt ? '&pageToken=' + encodeURIComponent(pt) : ''}`);
+        r.files.forEach(f => brani.push({...f, k})); pt = r.nextPageToken;
+      } while (pt);
+    }
+    brani.sort((a, b) => a.name.localeCompare(b.name, 'it'));
+    $('#dlb').innerHTML = brani.map(b => `<option value="${esc(b.name)}">`).join('');
+    $('#msg').textContent = brani.length + ' brani. Scrivi il titolo o scegli dall’elenco.';
+    const id = new URLSearchParams(location.search).get('id'), b = brani.find(x => x.id === id);
+    if (b) { $('#bq').value = b.name; pick(b); }
+  } catch (e) { $('#msg').textContent = 'Errore: ' + e.message; }
+}
+$('#bq').oninput = () => { const b = brani.find(x => low(x.name) === low($('#bq').value)); if (b) pick(b); };
+async function pick(b) {
+  cur = b; parts = []; score = null; $('#bcat').textContent = LBL[b.k]; $('#msg').textContent = 'Carico le parti…'; $('#link').innerHTML = '';
+  try {
+    const q = `'${b.id}' in parents and trashed=false`;
+    const r = await g(`${API}&pageSize=200&orderBy=name&fields=files(id,name)&q=${encodeURIComponent(q)}`);
+    const pre = low(b.name + ' - ');
+    const fl = r.files.map(f => { let n = f.name.replace(/\.pdf$/i, ''); if (low(n).startsWith(pre)) n = n.slice(pre.length); return {id: f.id, name: n}; });
+    score = fl.find(p => /^partitura$/i.test(p.name)) || null;
+    parts = fl.filter(p => !/^(parti|partitura)$/i.test(p.name)).map(p => { const m = p.name.match(/^(\d+)\s+(.+)$/); return m ? {id: p.id, num: +m[1], name: m[2]} : null; })
+      .filter(Boolean).sort((a, c) => a.num - c.num);
+    $('#sel').innerHTML = [...parts, ...(score ? [score] : [])].map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+    $('#msg').textContent = parts.length + ' parti trovate.';
+  } catch (e) { $('#msg').textContent = 'Errore: ' + e.message; }
+  show();
+}
+
+// ---- Regole di assegnazione: da organico e parti disponibili alle copie ----
+function parseOrg(t) { return t.split('\n').map(l => l.trim().match(/^(\d+)\s+(.+)$/)).filter(Boolean).map(m => ({n: +m[1], role: m[2].trim()})); }
+function calc() {
+  const org = parseOrg($(cur.k === 'marce' ? '#om' : '#oc').value);
+  const P = new Map(parts.map(p => [low(p.name), p])), has = n => P.has(n);
+  const any = s => parts.some(p => low(p.name).startsWith(s));
+  const ton = (pre, L) => L.find(t => parts.some(p => low(p.name).startsWith(pre) && low(p.name).endsWith(' in ' + t))) || L[0];
+  const one = (c, n) => { const p = c.find(has); return p ? [{part: p, n}] : []; };
+  const sp = (a, b, n) => [{part: a, n: Math.ceil(n / 2)}, {part: b, n: Math.floor(n / 2)}];
+  const N = (b, k) => [[`${b} 1`, `${b} 1 e 2`, b], [`${b} 2`, `${b} 1 e 2`, b, `${b} 1`], [`${b} 3`, `${b} 2`, `${b} 1 e 2`, b, `${b} 1`]][k - 1] || [b];
+  const alloc = (role, n) => {
+    const r = low(role), m = r.match(/^(.*?) (\d)$/), b = m && m[1], k = m && +m[2];
+    if (r === 'ottavino') return one(['ottavino', ...N('flauto', 1)], n);
+    if (m && ['flauto', 'clarinetto', 'sax contralto'].includes(b)) return one(N(b, k), n);
+    if (m && ['tromba', 'cornetta'].includes(b)) {
+      const t = any('tromba') ? 'tromba' : any('cornetta') ? 'cornetta' : 'tromba';
+      if (k === 3 && has(t + ' 4') && has(t + ' 3')) return sp(t + ' 3', t + ' 4', n);
+      return one(N(t, k), n);
+    }
+    if (m && b === 'corno') {
+      const T = ton('corno ', ['f', 'eb', 'bb']), c = x => `corno ${x} in ${T}`, s = `corno in ${T}`;
+      return one([[c(1), s], [c(2), s, c(1)], [c(3), c(1), s], [c(4), c(3), c(2), s, c(1)]][k - 1] || [s], n);
+    }
+    if (m && b === 'trombone') {
+      const T = ton('trombone ', ['c bc', 'bb bc', 'eb bc']), t = x => `trombone ${x} in ${T}`, s = `trombone in ${T}`;
+      return one([[t(1), s], [t(2), s, t(1)], [t(3), t('basso'), t(2), s, t(1)]][k - 1] || [s], n);
+    }
+    if (r === 'sax tenore') return has('sax tenore 1') && has('sax tenore 2') ? sp('sax tenore 1', 'sax tenore 2', n) : one(['sax tenore', 'sax tenore 1 e 2', 'sax tenore 1'], n);
+    if (r === 'tuba') {
+      const T = ton('tuba', ['c bc', 'bb bc', 'eb bc']), t = x => `tuba${x} in ${T}`;
+      return has(t(' 1')) && has(t(' 2')) ? sp(t(' 1'), t(' 2'), n) : one([t(''), t(' 1 e 2'), t(' 1')], n);
+    }
+    if (r === 'eufonio') return one(['eufonio in c bc', 'eufonio in bb tc'], n);
+    return one([r, r + ' 1 e 2', r + ' 1'], n);
+  };
+  const res = org.map(o => ({...o, al: alloc(o.role, o.n)})), extra = {}, cnt = {};
+  parts.filter(p => / solo$/i.test(p.name)).forEach(p => {
+    const b = low(p.name).slice(0, -5), o = res.find(x => low(x.role) === b + ' 1') || res.find(x => low(x.role) === b);
+    if (o) { if (o.al[0] && o.n > 1) o.al[0].n -= 1; extra[low(p.name)] = 1; }
+  });
+  res.forEach(o => o.al.forEach(a => { cnt[a.part] = (cnt[a.part] || 0) + a.n; }));
+  Object.assign(cnt, extra);
+  parts.filter(p => /^percussioni/i.test(p.name)).forEach(p => { cnt[low(p.name)] = 1; });
+  return {
+    rows: parts.filter(p => cnt[low(p.name)] > 0).map(p => ({p, n: cnt[low(p.name)]})),
+    warn: res.filter(o => !o.al.length).map(o => `Nessuna parte trovata per «${o.role}» (${o.n} musici).`),
+    skip: parts.filter(p => !(cnt[low(p.name)] > 0)).map(p => p.name)
+  };
+}
+const mode = () => document.querySelector('input[name=m]:checked').value;
+document.querySelectorAll('input[name=m]').forEach(r => r.onchange = show);
+$('#sel').onchange = $('#nc').oninput = () => show();
+function show() {
+  $('#one').hidden = mode() !== 'una';
+  let h = '';
+  if (cur && parts.length) {
+    if (mode() === 'banda') {
+      const c = calc(), tot = c.rows.reduce((s, r) => s + r.n, 0);
+      h = `<ol>${c.rows.map(r => `<li><span>${esc(r.p.name)}</span><span class="lead"></span><code>${r.n}</code></li>`).join('')}</ol>
+        <p class="mono">Totale: ${tot} copie</p>` +
+        c.warn.map(w => `<p class="warn">${esc(w)}</p>`).join('') +
+        (c.skip.length ? `<p class="hint">Non stampate perché non in organico: ${esc(c.skip.join(', '))}.</p>` : '');
+    } else h = `<p class="mono">${+$('#nc').value || 1} copie di ${esc($('#sel').selectedOptions[0] ? $('#sel').selectedOptions[0].text : '')}</p>`;
+  }
+  $('#res').innerHTML = h;
+  $('#go').disabled = !(tok && cur && parts.length);
+}
+
+// ---- PDF da stampare ----
+$('#go').onclick = async () => {
+  const log = m => { $('#log').textContent += m + '\n'; };
+  $('#log').textContent = ''; $('#link').innerHTML = ''; $('#go').disabled = true;
+  try {
+    const items = mode() === 'banda' ? calc().rows.map(r => ({id: r.p.id, n: r.n, name: r.p.name}))
+      : [{id: $('#sel').value, n: Math.max(1, +$('#nc').value || 1), name: $('#sel').selectedOptions[0].text}];
+    const out = await PDFLib.PDFDocument.create();
+    for (const it of items) {
+      const d = await PDFLib.PDFDocument.load(await gb(`https://www.googleapis.com/drive/v3/files/${it.id}?alt=media&supportsAllDrives=true`), {ignoreEncryption: true});
+      for (let i = 0; i < it.n; i++) (await out.copyPages(d, d.getPageIndices())).forEach(p => out.addPage(p));
+      log(`✓ ${it.name} × ${it.n}`);
+    }
+    const url = URL.createObjectURL(new Blob([await out.save()], {type: 'application/pdf'}));
+    $('#link').innerHTML = `<a class="dl" href="${url}" target="_blank" rel="noopener">Apri il PDF da stampare (${out.getPageCount()} pagine)</a>`;
+  } catch (e) { log('Errore: ' + e.message); }
+  show();
+};
+show();
+</script>
+</body>
+</html>
