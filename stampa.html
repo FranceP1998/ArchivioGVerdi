@@ -116,7 +116,7 @@ const ORG0 = {
 const $ = s => document.querySelector(s), low = s => s.toLowerCase().trim();
 const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const API = 'https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives';
-let tok, brani = [], cur = null, parts = [], score = null;
+let tok, brani = [], cur = null, parts = [], score = null, seq = 0, lab = b => b.name;
 $('#oc').value = ORG0.concerto; $('#om').value = ORG0.marce;
 
 // ---- Accesso (la sessione è condivisa con le altre pagine) ----
@@ -205,18 +205,26 @@ async function start() {
       } while (pt);
     }
     brani.sort((a, b) => a.name.localeCompare(b.name, 'it'));
-    $('#dlb').innerHTML = brani.map(b => `<option value="${esc(b.name)}">`).join('');
+    const dup = {}; brani.forEach(b => { dup[low(b.name)] = (dup[low(b.name)] || 0) + 1; });
+    lab = b => dup[low(b.name)] > 1 ? `${b.name} — ${LBL[b.k]}` : b.name;
+    $('#dlb').innerHTML = brani.map(b => `<option value="${esc(lab(b))}">`).join('');
     $('#msg').textContent = brani.length + ' brani. Scrivi il titolo o scegli dall’elenco.';
     const id = new URLSearchParams(location.search).get('id'), b = brani.find(x => x.id === id);
-    if (b) { $('#bq').value = b.name; pick(b); }
+    if (b) { $('#bq').value = lab(b); pick(b); }
   } catch (e) { $('#msg').textContent = 'Errore: ' + e.message; }
 }
-$('#bq').oninput = () => { const b = brani.find(x => low(x.name) === low($('#bq').value)); if (b) pick(b); };
+$('#bq').oninput = $('#bq').onchange = () => {
+  const v = low($('#bq').value); let c = brani.filter(x => low(lab(x)) === v);
+  if (!c.length) c = brani.filter(x => low(x.name) === v);
+  if (c.length === 1) { if (!cur || cur.id !== c[0].id) pick(c[0]); }
+  else if (c.length > 1) $('#msg').textContent = 'Ci sono ' + c.length + ' brani con questo nome: scegli dall’elenco quello della cartella giusta.';
+};
 async function pick(b) {
-  cur = b; parts = []; score = null; $('#bcat').textContent = LBL[b.k]; $('#msg').textContent = 'Carico le parti…'; $('#link').innerHTML = '';
+  const my = ++seq; cur = b; parts = []; score = null; $('#bcat').textContent = LBL[b.k]; $('#msg').textContent = 'Carico le parti…'; $('#link').innerHTML = '';
   try {
     const q = `'${b.id}' in parents and trashed=false`;
     const r = await g(`${API}&pageSize=200&orderBy=name&fields=files(id,name)&q=${encodeURIComponent(q)}`);
+    if (my !== seq) return;
     const pre = low(b.name + ' - ');
     const fl = r.files.map(f => { let n = f.name.replace(/\.pdf$/i, '').trim(); if (low(n).startsWith(pre)) n = n.slice(pre.length).trim(); return {id: f.id, name: n}; });
     const tail = /(^|\s-\s)(parti|partitura)$/i, sc = fl.find(p => /(^|\s-\s)partitura$/i.test(p.name));
@@ -224,7 +232,7 @@ async function pick(b) {
     parts = fl.filter(p => !tail.test(p.name)).map(p => { const m = p.name.match(/^(?:.*? - )?(\d+)\s+(.+)$/); return m ? {id: p.id, num: +m[1], name: m[2].trim()} : null; })
       .filter(Boolean).sort((a, c) => a.num - c.num);
     $('#sel').innerHTML = [...parts, ...(score ? [score] : [])].map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
-    $('#msg').textContent = parts.length + ' parti trovate.' + (parts.length ? '' : fl.length ? ' Non riconosco i nomi dei file, ad esempio «' + fl[0].name + '».' : ' La cartella è vuota.');
+    $('#msg').textContent = b.name + ' (' + LBL[b.k] + '): ' + parts.length + ' parti trovate.' + (parts.length ? '' : fl.length ? ' Non riconosco i nomi dei file, ad esempio «' + fl[0].name + '».' : ' La cartella è vuota.');
   } catch (e) { $('#msg').textContent = 'Errore: ' + e.message; }
   show();
 }
