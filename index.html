@@ -6,52 +6,55 @@
 <title>Divisione PDF · Archivio spartiti</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Karla:wght@400;600&family=Piazzolla:wght@500;700&family=Space+Mono&display=swap">
 <style>
-:root{--bg:#f4f5f2;--ink:#17231d;--mut:#5d6b63;--line:#cfd6cf;--acc:#1f4d3a;--tint:#e6ede7;--err:#a3321f}
+:root{--navy:#1E1937;--orange:#EF7135;--green:#008367;--wine:#620E1C;--cream:#F6E1C9;--gold:#F0BC0F;--sage:#7EA681;--sky:#BBDEF5;--ink:#1C1C1F}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Karla,sans-serif}
-h1,h2{font-family:Piazzolla,serif;margin:0;font-weight:700}
-h1{font-size:2rem}h2{font-size:1.2rem;margin-bottom:.6rem}
-header{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;padding:1.25rem clamp(1rem,4vw,3rem);border-bottom:1px solid var(--line)}
-header p{margin:0;color:var(--mut)}
-main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:1.5rem;padding:1.5rem clamp(1rem,4vw,3rem)}
+body{margin:0;background:var(--cream);color:var(--ink);font:16px/1.55 Karla,sans-serif}
+h1,h2{font-family:Piazzolla,serif;margin:0;font-weight:700;color:var(--navy)}
+h1{font-size:clamp(2rem,5vw,3rem);color:var(--cream);line-height:1.1}
+h2{font-size:1.3rem;margin-bottom:.6rem}
+header{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;padding:.9rem clamp(1rem,4vw,3rem);background:#fff;border-bottom:4px solid var(--orange)}
+.logo{display:block;height:48px;width:auto;max-width:100%}
+.acc{display:flex;align-items:center;gap:.75rem}
+#st{padding:.2rem .7rem;border-radius:999px;background:var(--sky);color:var(--navy)}
+#st.on{background:var(--green);color:#fff}
+.band{background:var(--navy);padding:2rem clamp(1rem,4vw,3rem) 2.25rem}
+.band p{margin:.4rem 0 0;color:var(--cream);font-size:1.1rem}
+main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:1.5rem;padding:1.5rem clamp(1rem,4vw,3rem) 3rem}
 @media(max-width:860px){main{grid-template-columns:1fr}}
-section{margin-bottom:1.5rem}
-label{display:block;font-weight:600;margin-bottom:.25rem}
+section{background:#fff;border-radius:12px;padding:1.25rem;align-self:start}
+label{display:block;font-weight:600;margin-bottom:.25rem;color:var(--navy)}
 input,select,textarea,button{font:inherit;color:inherit}
-input,select,textarea{width:100%;padding:.5rem .6rem;border:1px solid var(--line);border-radius:6px;background:#fff}
-input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
-button{cursor:pointer;border:1px solid var(--acc);background:#fff;color:var(--acc);padding:.5rem .9rem;border-radius:6px;font-weight:600}
-button.main{background:var(--acc);color:#fff}
-button:disabled{opacity:.45;cursor:not-allowed}
+input,select,textarea{width:100%;padding:.5rem .6rem;border:1px solid var(--navy);border-radius:6px;background:#fff;color:var(--ink)}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+button{cursor:pointer;border:2px solid var(--navy);background:#fff;color:var(--navy);padding:.5rem 1rem;border-radius:999px;font-weight:600}
+button:hover:not(:disabled){background:var(--sky)}
+button.main{background:var(--orange);border-color:var(--orange);color:var(--navy)}
+button.main:hover:not(:disabled){background:var(--gold);border-color:var(--gold)}
+button:disabled{background:var(--cream);border-color:var(--cream);color:var(--navy);cursor:not-allowed}
 .two{display:grid;grid-template-columns:2fr 1fr;gap:.75rem}
 .row{display:grid;grid-template-columns:1fr 5rem 5rem 2.5rem;gap:.4rem;margin-bottom:.4rem}
 .row input[type=number]{font-family:'Space Mono',monospace;text-align:center}
-.row button{padding:.3rem;border-color:var(--line);color:var(--mut)}
-.cap{display:grid;grid-template-columns:1fr 5rem 5rem 2.5rem;gap:.4rem;color:var(--mut);font-size:.875rem}
-iframe{width:100%;height:78vh;border:1px solid var(--line);border-radius:6px;background:#fff}
+.row button{padding:.3rem;border-width:1px}
+.cap{display:grid;grid-template-columns:1fr 5rem 5rem 2.5rem;gap:.4rem;font-size:.875rem;margin-bottom:.25rem}
+iframe{width:100%;height:78vh;border:1px solid var(--navy);border-radius:6px;background:#fff}
 ol{list-style:none;margin:0;padding:0}
 li{display:flex;align-items:baseline;gap:.5rem;padding:.2rem 0}
-li .lead{flex:1;border-bottom:1px dotted var(--mut);transform:translateY(-.25rem)}
+li .lead{flex:1;border-bottom:1px dotted var(--navy);transform:translateY(-.25rem)}
 li code,pre,#st,#tot{font-family:'Space Mono',monospace;font-size:.85rem}
-li.bad{color:var(--err)}li em{color:var(--err);font-size:.85rem}
-pre{white-space:pre-wrap;color:var(--mut);margin:.75rem 0 0}
-details{border:1px solid var(--line);border-radius:6px;padding:.6rem .8rem;background:#fff}
-summary{cursor:pointer;font-weight:600}
+li.bad{color:var(--wine);font-weight:600}li em{color:var(--wine);font-size:.85rem}
+pre{white-space:pre-wrap;margin:.75rem 0 0}
+details{border:1px solid var(--navy);border-radius:8px;padding:.6rem .8rem}
+summary{cursor:pointer;font-weight:600;color:var(--navy)}
 textarea{height:16rem;font-family:'Space Mono',monospace;font-size:.85rem;margin:.6rem 0}
-.hint{color:var(--mut);font-size:.9rem;margin:.25rem 0 .75rem}
+.hint{font-size:.9rem;margin:.25rem 0 .75rem}
 </style>
 </head>
 <body>
 <header>
-  <div>
-    <h1>Divisione PDF</h1>
-    <p>Archivio spartiti · Corpo Musicale G. Verdi</p>
-  </div>
-  <div>
-    <span id="st">Non connesso</span>
-    <button id="login">Accedi con Google</button>
-  </div>
+  <a href="https://www.corpomusicalegverdi.it/"><img class="logo" src="https://www.corpomusicalegverdi.it/wp-content/uploads/2026/01/Marchio-Ufficiale-Orizzontale.svg" alt="Corpo Musicale “G. Verdi” di Venaria Reale"></a>
+  <div class="acc"><span id="st">Non connesso</span><button id="login">Accedi con Google</button></div>
 </header>
+<div class="band"><h1>Divisione PDF</h1><p>Archivio spartiti</p></div>
 
 <main>
   <section>
@@ -109,9 +112,10 @@ const CFG = {
 const $ = s => document.querySelector(s), pad = n => String(n).padStart(2, '0');
 const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const N = (b, k) => Array.from({length: k}, (_, i) => b + ' ' + (i + 1));
+const D = b => [...N(b, 2), b + ' 1 e 2', b];
 const T = (b, ps, ts) => ts.flatMap(t => ps.map(p => (p ? b + ' ' + p : b) + ' in ' + t));
 const TON = ['C BC', 'C TC', 'Bb BC', 'Bb TC', 'Eb BC', 'Eb TC'];
-const DEF = ['Ottavino', ...N('Flauto', 2), 'Flauto 1 e 2', 'Flauto', 'Clarinetto in Eb', ...N('Clarinetto', 3), 'Clarinetto', 'Clarinetto basso',
+const DEF = ['Ottavino', ...N('Flauto', 2), 'Flauto 1 e 2', 'Flauto', ...D('Oboe'), ...D('Corno Inglese'), ...D('Fagotto'), 'Clarinetto in Eb', ...N('Clarinetto', 3), 'Clarinetto', 'Clarinetto basso',
   'Sax Soprano', ...N('Sax Contralto', 2), 'Sax Contralto', ...N('Sax Tenore', 2), 'Sax Tenore', 'Sax Baritono',
   ...N('Flicorno', 3), 'Flicorno', ...N('Cornetta', 3), 'Cornetta', ...N('Tromba', 4), 'Tromba',
   ...T('Corno', ['1','2','3','4',''], ['F','Eb','Bb']),
@@ -193,7 +197,7 @@ $('#login').onclick = () => {
   if (!window.google) { $('#st').textContent = 'Servizio Google non raggiungibile'; return; }
   google.accounts.oauth2.initTokenClient({
     client_id: CFG.CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive', hd: 'corpomusicalegverdi.it',
-    callback: r => { if (r.access_token) { tok = r.access_token; $('#st').textContent = 'Connesso'; sum(); } }
+    callback: r => { if (r.access_token) { tok = r.access_token; $('#st').textContent = 'Connesso'; $('#st').className = 'on'; sum(); } }
   }).requestAccessToken();
 };
 async function g(url, opt = {}) {
