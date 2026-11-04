@@ -47,11 +47,16 @@ details{border:1px solid var(--navy);border-radius:8px;padding:.6rem .8rem}
 summary{cursor:pointer;font-weight:600;color:var(--navy)}
 textarea{height:16rem;font-family:'Space Mono',monospace;font-size:.85rem;margin:.6rem 0}
 .hint{font-size:.9rem;margin:.25rem 0 .75rem}
+.nav{display:flex;gap:1.25rem}
+.nav a{color:var(--navy);font-weight:600;text-decoration:none;padding:.25rem 0;border-bottom:3px solid transparent}
+.nav a[aria-current]{border-bottom-color:var(--orange)}
+.nav a:hover{border-bottom-color:var(--sage)}
 </style>
 </head>
 <body>
 <header>
   <a href="https://www.corpomusicalegverdi.it/"><img class="logo" src="https://www.corpomusicalegverdi.it/wp-content/uploads/2026/01/Marchio-Ufficiale-Orizzontale.svg" alt="Corpo Musicale “G. Verdi” di Venaria Reale"></a>
+  <nav class="nav"><a href="archivio.html">Archivio</a><a href="index.html" aria-current="page">Divisione PDF</a></nav>
   <div class="acc"><span id="st">Non connesso</span><button id="login">Accedi con Google</button></div>
 </header>
 <div class="band"><h1>Divisione PDF</h1><p>Archivio spartiti</p></div>
@@ -224,18 +229,45 @@ async function cut(a, b) {
 }
 
 // Google Drive
+const SS = {
+  get: k => { try { return sessionStorage.getItem(k); } catch (e) { return null; } },
+  set: (k, v) => { try { sessionStorage.setItem(k, v); } catch (e) {} },
+  del: k => { try { sessionStorage.removeItem(k); } catch (e) {} }
+};
+function connected(name) {
+  $('#st').textContent = name ? 'Ciao ' + name : 'Connesso'; $('#st').className = 'on';
+  $('#login').hidden = true; sum(); loadOrder();
+}
+function expired() {
+  tok = null; SS.del('sess'); $('#st').textContent = 'Sessione scaduta'; $('#st').className = '';
+  $('#login').hidden = false; sum();
+}
 $('#login').onclick = () => {
   if (!window.google) { $('#st').textContent = 'Servizio Google non raggiungibile'; return; }
+  let hint; try { hint = localStorage.getItem('hint') || undefined; } catch (e) {}
   google.accounts.oauth2.initTokenClient({
-    client_id: CFG.CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive openid profile', hd: 'corpomusicalegverdi.it',
-    callback: async r => { if (r.access_token) { tok = r.access_token; $('#st').textContent = 'Connesso'; $('#st').className = 'on'; sum(); try { const u = await g('https://www.googleapis.com/oauth2/v3/userinfo'); $('#st').textContent = 'Ciao ' + (u.given_name || u.name || ''); } catch (e) {} loadOrder(); } }
+    client_id: CFG.CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive openid profile', hd: 'corpomusicalegverdi.it', login_hint: hint,
+    callback: async r => {
+      if (!r.access_token) return;
+      tok = r.access_token; let name = '';
+      try {
+        const u = await g('https://www.googleapis.com/oauth2/v3/userinfo');
+        name = u.given_name || u.name || '';
+        try { localStorage.setItem('hint', u.email); } catch (e) {}
+      } catch (e) {}
+      SS.set('sess', JSON.stringify({t: tok, n: name, e: Date.now() + ((Number(r.expires_in) || 3600) - 120) * 1000}));
+      connected(name);
+    }
   }).requestAccessToken();
 };
 async function g(url, opt = {}) {
   const r = await fetch(url, {...opt, headers: {...(opt.headers || {}), Authorization: 'Bearer ' + tok}});
+  if (r.status === 401) { expired(); throw new Error('Sessione scaduta: accedi di nuovo con Google.'); }
   if (!r.ok) throw new Error(await r.text());
   return r.json();
 }
+// Dopo un aggiornamento della pagina l'accesso resta valido finché il permesso di Google non scade (circa un'ora)
+try { const s0 = JSON.parse(SS.get('sess')); if (s0 && s0.e > Date.now()) { tok = s0.t; window.addEventListener('load', () => connected(s0.n)); } } catch (e) {}
 async function up(name, bytes, parent) {
   const f = new FormData();
   f.append('metadata', new Blob([JSON.stringify({name, parents: [parent]})], {type: 'application/json'}));
