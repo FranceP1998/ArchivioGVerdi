@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Divisione PDF · Archivio spartiti</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Karla:wght@400;600&family=Piazzolla:wght@500;700&family=Space+Mono&display=swap">
+<style>
+:root{--navy:#1E1937;--orange:#EF7135;--green:#008367;--wine:#620E1C;--cream:#F6E1C9;--gold:#F0BC0F;--sage:#7EA681;--sky:#BBDEF5;--ink:#1C1C1F}
+*{box-sizing:border-box}
+body{margin:0;background:var(--cream);color:var(--ink);font:16px/1.55 Karla,sans-serif}
+h1,h2{font-family:Piazzolla,serif;margin:0;font-weight:700;color:var(--navy)}
+h1{font-size:clamp(2rem,5vw,3rem);color:var(--cream);line-height:1.1}
+h2{font-size:1.3rem;margin-bottom:.6rem}
+header{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;padding:.9rem clamp(1rem,4vw,3rem);background:#fff;border-bottom:4px solid var(--orange)}
+.logo{display:block;height:48px;width:auto;max-width:100%}
+.acc{display:flex;align-items:center;gap:.75rem}
+#st{padding:.2rem .7rem;border-radius:999px;background:var(--sky);color:var(--navy)}
+#st.on{background:var(--green);color:#fff}
+.band{background:var(--navy);padding:2rem clamp(1rem,4vw,3rem) 2.25rem}
+.band p{margin:.4rem 0 0;color:var(--cream);font-size:1.1rem}
+main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:1.5rem;padding:1.5rem clamp(1rem,4vw,3rem) 3rem}
+@media(max-width:860px){main{grid-template-columns:1fr}}
+section{background:#fff;border-radius:12px;padding:1.25rem;align-self:start}
+label{display:block;font-weight:600;margin-bottom:.25rem;color:var(--navy)}
+input,select,textarea,button{font:inherit;color:inherit}
+input,select,textarea{width:100%;padding:.5rem .6rem;border:1px solid var(--navy);border-radius:6px;background:#fff;color:var(--ink)}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+button{cursor:pointer;border:2px solid var(--navy);background:#fff;color:var(--navy);padding:.5rem 1rem;border-radius:999px;font-weight:600}
+button:hover:not(:disabled){background:var(--sky)}
+button.main{background:var(--orange);border-color:var(--orange);color:var(--navy)}
+button.main:hover:not(:disabled){background:var(--gold);border-color:var(--gold)}
+button:disabled{background:var(--cream);border-color:var(--cream);color:var(--navy);cursor:not-allowed}
+.two{display:grid;grid-template-columns:2fr 1fr;gap:.75rem}
+.row{display:grid;grid-template-columns:1fr 5rem 5rem 2.5rem;gap:.4rem;margin-bottom:.4rem}
+.row input[type=number]{font-family:'Space Mono',monospace;text-align:center}
+.row button{padding:.3rem;border-width:1px}
+.cap{display:grid;grid-template-columns:1fr 5rem 5rem 2.5rem;gap:.4rem;font-size:.875rem;margin-bottom:.25rem}
+iframe{width:100%;height:78vh;border:1px solid var(--navy);border-radius:6px;background:#fff}
+ol{list-style:none;margin:0;padding:0}
+li{display:flex;align-items:baseline;gap:.5rem;padding:.2rem 0}
+li .lead{flex:1;border-bottom:1px dotted var(--navy);transform:translateY(-.25rem)}
+li code,pre,#st,#tot{font-family:'Space Mono',monospace;font-size:.85rem}
+li.bad{color:var(--wine);font-weight:600}li em{color:var(--wine);font-size:.85rem}
+pre{white-space:pre-wrap;margin:.75rem 0 0}
+details{border:1px solid var(--navy);border-radius:8px;padding:.6rem .8rem}
+summary{cursor:pointer;font-weight:600;color:var(--navy)}
+textarea{height:16rem;font-family:'Space Mono',monospace;font-size:.85rem;margin:.6rem 0}
+.hint{font-size:.9rem;margin:.25rem 0 .75rem}
+.nav{display:flex;gap:1.25rem}
+.nav a{color:var(--navy);font-weight:600;text-decoration:none;padding:.25rem 0;border-bottom:3px solid transparent}
+.nav a[aria-current]{border-bottom-color:var(--orange)}
+.nav a:hover{border-bottom-color:var(--sage)}
+#pv{height:74vh;overflow-y:auto;scroll-snap-type:y mandatory;border:1px solid var(--navy);border-radius:6px;background:var(--sky)}
+.pg{height:100%;scroll-snap-align:start;scroll-snap-stop:always;display:flex;align-items:center;justify-content:center}
+.pg canvas{background:#fff}
+.vbar{display:flex;align-items:center;justify-content:center;gap:.75rem;margin-bottom:.5rem}
+.go{display:flex;align-items:center;gap:.4rem;margin:0;font-weight:400}
+.go input{width:4.5rem;text-align:center;font-family:'Space Mono',monospace}
+</style>
+</head>
+<body>
+<header>
+  <a href="https://www.corpomusicalegverdi.it/"><img class="logo" src="https://www.corpomusicalegverdi.it/wp-content/uploads/2026/01/Marchio-Ufficiale-Orizzontale.svg" alt="Corpo Musicale “G. Verdi” di Venaria Reale"></a>
+  <nav class="nav"><a href="archivio.html">Archivio</a><a href="divisione.html" aria-current="page">Divisione PDF</a></nav>
+  <div class="acc"><span id="st">Non connesso</span><button id="login">Accedi con Google</button></div>
+</header>
+<div class="band"><h1>Divisione PDF</h1><p>Archivio spartiti</p></div>
+
+<main>
+  <section>
+    <h2>PDF da dividere</h2>
+    <input type="file" id="f" accept="application/pdf" aria-label="Scegli il PDF">
+    <p class="hint"><span id="tot">Nessun file</span></p>
+    <div class="vbar"><button id="prev" type="button" aria-label="Pagina precedente">‹</button><label class="go" for="pn">Pagina <input id="pn" type="number" min="1" value="1"> di <span id="pt">0</span></label><button id="next" type="button" aria-label="Pagina successiva">›</button></div>
+    <div id="pv" tabindex="0" aria-label="Anteprima del PDF"></div>
+  </section>
+
+  <section>
+    <h2>Brano</h2>
+    <div class="two">
+      <div><label for="tit">Titolo</label><input id="tit" placeholder="Titolo del brano"></div>
+      <div><label for="cat">Cartella</label>
+        <select id="cat"><option value="concerto">Brani da concerto</option><option value="marce">Marce</option></select>
+      </div>
+    </div>
+
+    <h2 style="margin-top:1.5rem">Parti nell’ordine del PDF</h2>
+    <p class="hint">Scrivi gli strumenti come compaiono nel PDF. Vengono riordinati da soli secondo l’ordine classico. Per le percussioni scrivi «Percussioni - Glockenspiel». Per la partitura scrivi «Partitura».</p>
+    <div class="cap"><span>Strumento</span><span>Da pag.</span><span>A pag.</span><span></span></div>
+    <div id="rows"></div>
+    <button id="add" type="button">Aggiungi parte</button>
+    <datalist id="dl"></datalist>
+
+    <h2 style="margin-top:1.5rem">File che verranno creati</h2>
+    <ol id="out"></ol>
+
+    <p style="margin-top:1rem"><button id="go" class="main" disabled>Dividi e carica sul Drive</button></p>
+    <pre id="log"></pre>
+
+    <details style="margin-top:1.5rem">
+      <summary>Ordine classico degli strumenti</summary>
+      <p class="hint">Una riga per strumento. Per aggiungere uno strumento inserisci una riga dove vuoi. I nomi devono coincidere con quelli usati nelle parti. Quando salvi, l’ordine vale per tutta la banda.</p>
+      <textarea id="ord" spellcheck="false"></textarea>
+      <button id="saveord" type="button">Salva ordine</button>
+      <button id="reset" type="button">Ripristina predefinito</button>
+      <p id="ordmsg" class="hint"></p>
+    </details>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+// ---- Da compilare una sola volta ----
+const CFG = {
+  CLIENT_ID: '461215269916-tcd8cfsa5m951ohohibf4f8635tdgolp.apps.googleusercontent.com',
+  FOLDERS: {
+    concerto: '1wWMSp-kyX2K6Kk1hJfuv3gISgkoQBX4V',
+    marce: '1M0-uSG4jsO-P6SG-MY1MoNd_aAppM8Dp'
+  }
+};
+// -------------------------------------
+
+const $ = s => document.querySelector(s), pad = n => String(n).padStart(2, '0');
+const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const N = (b, k) => Array.from({length: k}, (_, i) => b + ' ' + (i + 1));
+const D = b => [...N(b, 2), b + ' 1 e 2', b];
+const T = (b, ps, ts) => ts.flatMap(t => ps.map(p => (p ? b + ' ' + p : b) + ' in ' + t));
+const TON = ['C BC', 'C TC', 'Bb BC', 'Bb TC', 'Eb BC', 'Eb TC'];
+const DEF = ['Ottavino', ...N('Flauto', 2), 'Flauto 1 e 2', 'Flauto', ...D('Oboe'), ...D('Corno Inglese'), ...D('Fagotto'), 'Clarinetto in Eb', ...N('Clarinetto', 3), 'Clarinetto', 'Clarinetto basso',
+  'Sax Soprano', ...N('Sax Contralto', 2), 'Sax Contralto', ...N('Sax Tenore', 2), 'Sax Tenore', 'Sax Baritono',
+  ...N('Flicorno', 3), 'Flicorno', ...N('Cornetta', 3), 'Cornetta', ...N('Tromba', 4), 'Tromba',
+  ...T('Corno', ['1','2','3','4',''], ['F','Eb','Bb']),
+  'Eufonio in C BC', 'Eufonio in Bb TC', 'Eufonio in C TC', 'Eufonio in Bb BC',
+  ...T('Trombone', ['1','2','3','Basso',''], TON), ...T('Tuba', ['1','2','1 e 2',''], TON),
+  'Contrabbasso', 'Pianoforte', 'Percussioni'];
+
+let tok, pdf, total = 0, rows = [{n: '', a: 1, b: 1}];
+
+// Ordine strumenti
+$('#ord').value = DEF.join('\n');
+const order = () => $('#ord').value.split('\n').map(s => s.trim()).filter(Boolean);
+function fillList() { $('#dl').innerHTML = [...order(), 'Partitura'].map(s => `<option value="${esc(s)}">`).join(''); }
+const CFGNAME = 'ordine-strumenti.json', msg = t => { $('#ordmsg').textContent = t; };
+let cfgId, cfgParent;
+async function loadOrder() {
+  try {
+    cfgParent = (await g(`https://www.googleapis.com/drive/v3/files/${CFG.FOLDERS.concerto}?fields=parents&supportsAllDrives=true`)).parents[0];
+    const q = `'${cfgParent}' in parents and name='${CFGNAME}' and trashed=false`;
+    const r = await g(`https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives&fields=files(id)&q=${encodeURIComponent(q)}`);
+    if (r.files.length) {
+      cfgId = r.files[0].id;
+      $('#ord').value = (await g(`https://www.googleapis.com/drive/v3/files/${cfgId}?alt=media&supportsAllDrives=true`)).join('\n');
+      msg('Ordine della banda caricato dal Drive.');
+    } else msg('Nessun ordine salvato sul Drive: è quello predefinito.');
+  } catch (e) { msg('Non riesco a leggere l’ordine dal Drive: ' + e.message); }
+  fillList(); sum();
+}
+async function saveOrder() {
+  if (!tok) { msg('Accedi con Google per salvare l’ordine per tutta la banda.'); return; }
+  const body = JSON.stringify(order());
+  try {
+    if (cfgId) await g(`https://www.googleapis.com/upload/drive/v3/files/${cfgId}?uploadType=media&supportsAllDrives=true`, {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body});
+    else {
+      const f = new FormData();
+      f.append('metadata', new Blob([JSON.stringify({name: CFGNAME, parents: [cfgParent]})], {type: 'application/json'}));
+      f.append('file', new Blob([body], {type: 'application/json'}));
+      cfgId = (await g('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id', {method: 'POST', body: f})).id;
+    }
+    msg('Ordine salvato per tutta la banda.');
+  } catch (e) { msg('Non sono riuscito a salvare: ' + e.message); }
+  fillList(); sum();
+}
+$('#saveord').onclick = saveOrder;
+$('#reset').onclick = () => { if (confirm('Ripristinare l’ordine predefinito per tutta la banda?')) { $('#ord').value = DEF.join('\n'); saveOrder(); } };
+
+function key(n, L) {
+  let i = L.indexOf(n);
+  if (i >= 0) return i;
+  if (n.startsWith('Percussioni')) return L.indexOf('Percussioni');
+  if (n.endsWith(' Solo')) { const b = n.slice(0, -5); i = L.indexOf(b + ' 1'); if (i < 0) i = L.indexOf(b); if (i >= 0) return i - .5; }
+  return 9999;
+}
+
+// Righe delle parti
+function draw() {
+  $('#rows').innerHTML = rows.map((r, i) => `<div class="row">
+    <input list="dl" value="${esc(r.n)}" data-i="${i}" data-f="n" placeholder="Strumento" aria-label="Strumento">
+    <input type="number" min="1" value="${r.a}" data-i="${i}" data-f="a" aria-label="Da pagina">
+    <input type="number" min="1" value="${r.b}" data-i="${i}" data-f="b" aria-label="A pagina">
+    <button data-del="${i}" aria-label="Rimuovi la riga">✕</button></div>`).join('');
+  sum();
+}
+$('#rows').addEventListener('input', e => { const t = e.target, i = +t.dataset.i; rows[i][t.dataset.f] = t.dataset.f === 'n' ? t.value.trim() : +t.value; sum(); });
+$('#rows').addEventListener('click', e => { if (e.target.dataset.del !== undefined) { rows.splice(+e.target.dataset.del, 1); if (!rows.length) rows.push({n: '', a: 1, b: 1}); draw(); } });
+$('#add').onclick = () => { const l = rows[rows.length - 1], s = l && l.b ? l.b + 1 : 1; rows.push({n: '', a: s, b: s}); draw(); };
+$('#tit').oninput = () => sum();
+
+// Piano dei file: riordino secondo l'ordine classico e numerazione progressiva
+function plan() {
+  const L = order(), t = $('#tit').value.trim(), ok = rows.filter(r => r.n);
+  const parts = ok.filter(r => r.n !== 'Partitura').map((r, i) => ({...r, i, k: key(r.n, L)}))
+    .sort((x, y) => x.k - y.k || x.i - y.i).map((r, j) => ({...r, file: `${t} - ${pad(j + 1)} ${r.n}`}));
+  const sc = ok.find(r => r.n === 'Partitura');
+  const all = [...parts];
+  if (parts.length) all.push({n: 'Parti', file: `${t} - Parti`, merged: 1});
+  if (sc) all.push({...sc, file: `${t} - Partitura`});
+  return {parts, sc, all};
+}
+const bad = r => !(r.a >= 1 && r.b >= r.a && r.b <= total);
+function sum() {
+  const p = plan();
+  $('#out').innerHTML = p.all.map(r => `<li class="${!r.merged && bad(r) ? 'bad' : ''}"><span>${esc(r.file)}</span>${r.k === 9999 ? '<em>fuori elenco</em>' : ''}<span class="lead"></span><code>${r.merged ? 'tutte le parti' : r.a === r.b ? 'p. ' + r.a : 'p. ' + r.a + '–' + r.b}</code></li>`).join('');
+  const chk = [...p.parts, ...(p.sc ? [p.sc] : [])];
+  $('#go').disabled = !(tok && pdf && $('#tit').value.trim() && p.parts.length && !chk.some(bad));
+  return p;
+}
+
+// Anteprima: una pagina intera alla volta, con numero sempre certo
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+let vdoc, io, cur = 1;
+function setCur(n, fromScroll) {
+  const max = vdoc ? vdoc.numPages : 1;
+  cur = Math.min(Math.max(1, n || 1), max); $('#pn').value = cur;
+  if (!fromScroll) $('#pv').scrollTo({top: (cur - 1) * $('#pv').clientHeight});
+}
+async function drawPage(el) {
+  const p = await vdoc.getPage(+el.dataset.n), b = $('#pv'), dpr = window.devicePixelRatio || 1;
+  const v0 = p.getViewport({scale: 1}), s = Math.min((b.clientWidth - 16) / v0.width, (b.clientHeight - 16) / v0.height);
+  const v = p.getViewport({scale: s * dpr}), c = document.createElement('canvas');
+  c.width = v.width; c.height = v.height; c.style.width = v.width / dpr + 'px'; c.style.height = v.height / dpr + 'px';
+  el.appendChild(c);
+  await p.render({canvasContext: c.getContext('2d'), viewport: v}).promise;
+}
+async function openViewer(buf) {
+  const box = $('#pv'); box.innerHTML = '';
+  try {
+    vdoc = await pdfjsLib.getDocument({data: new Uint8Array(buf)}).promise;
+  } catch (e) { vdoc = null; box.textContent = 'Anteprima non disponibile per questo PDF.'; return; }
+  $('#pt').textContent = vdoc.numPages; $('#pn').max = vdoc.numPages;
+  if (io) io.disconnect();
+  io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting && !e.target.dataset.r) { e.target.dataset.r = 1; drawPage(e.target); } }), {root: box, rootMargin: '100% 0px'});
+  for (let i = 1; i <= vdoc.numPages; i++) { const d = document.createElement('div'); d.className = 'pg'; d.dataset.n = i; box.appendChild(d); io.observe(d); }
+  setCur(1);
+}
+$('#pv').onscroll = () => setCur(Math.round($('#pv').scrollTop / $('#pv').clientHeight) + 1, true);
+$('#prev').onclick = () => setCur(cur - 1);
+$('#next').onclick = () => setCur(cur + 1);
+$('#pn').onchange = () => setCur(+$('#pn').value);
+$('#pv').onkeydown = e => {
+  const k = {ArrowDown: 1, PageDown: 1, ArrowRight: 1, ArrowUp: -1, PageUp: -1, ArrowLeft: -1}[e.key];
+  if (k) { e.preventDefault(); setCur(cur + k); }
+};
+
+// PDF di partenza
+$('#f').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const buf = await f.arrayBuffer();
+    pdf = await PDFLib.PDFDocument.load(buf, {ignoreEncryption: true});
+    total = pdf.getPageCount();
+    openViewer(buf.slice(0));
+    $('#tot').textContent = total + ' pagine';
+    if (!$('#tit').value) $('#tit').value = f.name.replace(/\.pdf$/i, '');
+  } catch (err) { pdf = null; $('#tot').textContent = 'Impossibile aprire il PDF'; }
+  sum();
+};
+async function cut(a, b) {
+  const d = await PDFLib.PDFDocument.create();
+  (await d.copyPages(pdf, Array.from({length: b - a + 1}, (_, i) => a - 1 + i))).forEach(x => d.addPage(x));
+  return d;
+}
+
+// Google Drive
+const SS = {
+  get: k => { try { return sessionStorage.getItem(k); } catch (e) { return null; } },
+  set: (k, v) => { try { sessionStorage.setItem(k, v); } catch (e) {} },
+  del: k => { try { sessionStorage.removeItem(k); } catch (e) {} }
+};
+function connected(name) {
+  $('#st').textContent = name ? 'Ciao ' + name : 'Connesso'; $('#st').className = 'on';
+  $('#login').hidden = true; sum(); loadOrder();
+}
+function expired() {
+  tok = null; SS.del('sess'); $('#st').textContent = 'Sessione scaduta'; $('#st').className = '';
+  $('#login').hidden = false; sum();
+}
+$('#login').onclick = () => {
+  if (!window.google) { $('#st').textContent = 'Servizio Google non raggiungibile'; return; }
+  let hint; try { hint = localStorage.getItem('hint') || undefined; } catch (e) {}
+  google.accounts.oauth2.initTokenClient({
+    client_id: CFG.CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive openid profile', hd: 'corpomusicalegverdi.it', login_hint: hint,
+    callback: async r => {
+      if (!r.access_token) return;
+      tok = r.access_token; let name = '';
+      try {
+        const u = await g('https://www.googleapis.com/oauth2/v3/userinfo');
+        name = u.given_name || u.name || '';
+        try { localStorage.setItem('hint', u.email); } catch (e) {}
+      } catch (e) {}
+      SS.set('sess', JSON.stringify({t: tok, n: name, e: Date.now() + ((Number(r.expires_in) || 3600) - 120) * 1000}));
+      connected(name);
+    }
+  }).requestAccessToken();
+};
+async function g(url, opt = {}) {
+  const r = await fetch(url, {...opt, headers: {...(opt.headers || {}), Authorization: 'Bearer ' + tok}});
+  if (r.status === 401) { expired(); throw new Error('Sessione scaduta: accedi di nuovo con Google.'); }
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+// Dopo un aggiornamento della pagina l'accesso resta valido finché il permesso di Google non scade (circa un'ora)
+try { const s0 = JSON.parse(SS.get('sess')); if (s0 && s0.e > Date.now()) { tok = s0.t; window.addEventListener('load', () => connected(s0.n)); } } catch (e) {}
+async function up(name, bytes, parent) {
+  const f = new FormData();
+  f.append('metadata', new Blob([JSON.stringify({name, parents: [parent]})], {type: 'application/json'}));
+  f.append('file', new Blob([bytes], {type: 'application/pdf'}));
+  return g('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true', {method: 'POST', body: f});
+}
+
+$('#go').onclick = async () => {
+  const p = plan(), t = $('#tit').value.trim(), log = m => { $('#log').textContent += m + '\n'; };
+  $('#log').textContent = ''; $('#go').disabled = true;
+  try {
+    const parent = CFG.FOLDERS[$('#cat').value];
+    const q = `'${parent}' in parents and name='${t.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}' and trashed=false`;
+    const ex = await g(`https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives&q=${encodeURIComponent(q)}`);
+    if (ex.files.length) throw new Error(`Esiste già una cartella «${t}».`);
+    const folder = await g('https://www.googleapis.com/drive/v3/files?supportsAllDrives=true', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name: t, mimeType: 'application/vnd.google-apps.folder', parents: [parent]})
+    });
+    log('Cartella creata');
+    const docs = [];
+    for (const r of p.parts) {
+      const d = await cut(r.a, r.b); docs.push(d);
+      await up(r.file + '.pdf', await d.save(), folder.id); log('✓ ' + r.file);
+    }
+    const m = await PDFLib.PDFDocument.create();
+    for (const d of docs) (await m.copyPages(d, d.getPageIndices())).forEach(x => m.addPage(x));
+    await up(`${t} - Parti.pdf`, await m.save(), folder.id); log(`✓ ${t} - Parti`);
+    if (p.sc) { await up(`${t} - Partitura.pdf`, await (await cut(p.sc.a, p.sc.b)).save(), folder.id); log(`✓ ${t} - Partitura`); }
+    log('Fatto.');
+  } catch (e) { log('Errore: ' + e.message); }
+  sum();
+};
+
+fillList(); draw();
+</script>
+</body>
+</html>
