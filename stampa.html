@@ -81,6 +81,10 @@ li label{font-weight:400;color:var(--ink)}
       <label><input type="radio" name="m" value="una"> Una singola parte</label>
       <label><input type="radio" name="m" value="scelta"> Parti a scelta, con le copie per ogni strumento</label>
     </div>
+    <div id="lay" class="mode" hidden><span>Su ogni foglio:</span>
+      <label><input type="radio" name="l" value="1" checked> 1 parte</label>
+      <label><input type="radio" name="l" value="2"> 2 parti A5 su un foglio A4</label>
+    </div>
     <label id="inc" class="inc"><input type="checkbox" id="sc"> Includi partitura<span id="scn"></span></label>
     <div id="one" class="bar" hidden>
       <select id="sel" aria-label="Parte"></select>
@@ -140,16 +144,16 @@ function expired() {
 }
 $('#login').onclick = () => {
   if (!window.google) { $('#st').textContent = 'Servizio Google non raggiungibile'; return; }
-  let hint; try { hint = localStorage.getItem('hint') || undefined; } catch (e) {}
+  try { localStorage.removeItem('hint'); } catch (e) {}
   google.accounts.oauth2.initTokenClient({
-    client_id: CFG.CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive openid profile', hd: 'corpomusicalegverdi.it', login_hint: hint,
+    client_id: CFG.CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive openid profile', hd: 'corpomusicalegverdi.it',
     callback: async r => {
       if (!r.access_token) return;
       tok = r.access_token; let name = '';
       try {
         const u = await g('https://www.googleapis.com/oauth2/v3/userinfo');
         name = u.given_name || u.name || '';
-        try { localStorage.setItem('hint', u.email); } catch (e) {}
+        
       } catch (e) {}
       SS.set('sess', JSON.stringify({t: tok, n: name, e: Date.now() + ((Number(r.expires_in) || 3600) - 120) * 1000}));
       connected(name);
@@ -298,7 +302,7 @@ $('#sel').onchange = $('#nc').oninput = () => show();
 const total = () => Object.values(want).reduce((a, b) => a + b, 0);
 function show() {
   const md = mode();
-  $('#one').hidden = md !== 'una'; $('#inc').hidden = md !== 'banda';
+  $('#one').hidden = md !== 'una'; $('#inc').hidden = md !== 'banda'; $('#lay').hidden = !(cur && cur.k === 'marce');
   $('#sc').disabled = !score; $('#scn').textContent = cur && !score ? ' (non presente in questa cartella)' : '';
   if (!score) $('#sc').checked = false;
   let h = '';
@@ -336,14 +340,26 @@ $('#go').onclick = async () => {
     const items = md === 'banda' ? [...($('#sc').checked && score ? [{id: score.id, n: 1, name: 'Partitura'}] : []), ...calc().rows.map(r => ({id: r.p.id, n: r.n, name: r.p.name}))]
       : md === 'scelta' ? all.filter(p => want[p.id] > 0).map(p => ({id: p.id, n: want[p.id], name: p.name}))
       : [{id: $('#sel').value, n: Math.max(1, +$('#nc').value || 1), name: $('#sel').selectedOptions[0].text}];
-    const out = await PDFLib.PDFDocument.create();
+    const two = cur.k === 'marce' && document.querySelector('input[name=l]:checked').value === '2';
+    const out = await PDFLib.PDFDocument.create(), cells = [];
     for (const it of items) {
       const d = await PDFLib.PDFDocument.load(await gb(`https://www.googleapis.com/drive/v3/files/${it.id}?alt=media&supportsAllDrives=true`), {ignoreEncryption: true});
-      for (let i = 0; i < it.n; i++) (await out.copyPages(d, d.getPageIndices())).forEach(p => out.addPage(p));
+      if (two) { const emb = await out.embedPdf(d, d.getPageIndices()); for (let i = 0; i < it.n; i++) cells.push(...emb); }
+      else for (let i = 0; i < it.n; i++) (await out.copyPages(d, d.getPageIndices())).forEach(p => out.addPage(p));
       log(`✓ ${it.name} × ${it.n}`);
     }
+    if (two) for (let i = 0; i < cells.length; i += 2) {
+      // A5 verticale: due affiancate su A4 orizzontale; A5 orizzontale: due una sopra l'altra su A4 verticale. L'ordine di stampa non cambia.
+      const land = cells[i].height >= cells[i].width, W = land ? 841.89 : 595.28, H = land ? 595.28 : 841.89;
+      const pg = out.addPage([W, H]), cw = land ? W / 2 : W, ch = land ? H : H / 2;
+      [cells[i], cells[i + 1]].forEach((e, j) => {
+        if (!e) return;
+        const s = Math.min(cw / e.width, ch / e.height), w = e.width * s, h = e.height * s;
+        pg.drawPage(e, {x: land ? j * cw + (cw - w) / 2 : (cw - w) / 2, y: land ? (ch - h) / 2 : (j === 0 ? ch : 0) + (ch - h) / 2, width: w, height: h});
+      });
+    }
     const url = URL.createObjectURL(new Blob([await out.save()], {type: 'application/pdf'}));
-    $('#link').innerHTML = `<a class="dl" href="${url}" target="_blank" rel="noopener">Apri il PDF da stampare (${out.getPageCount()} pagine)</a>`;
+    $('#link').innerHTML = `<a class="dl" href="${url}" target="_blank" rel="noopener">Apri il PDF da stampare (${two ? out.getPageCount() + ' fogli A4, ' + cells.length + ' parti A5' : out.getPageCount() + ' pagine'})</a>`;
   } catch (e) { log('Errore: ' + e.message); }
   show();
 };
