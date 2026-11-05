@@ -57,6 +57,11 @@ textarea{height:16rem;font-family:'Space Mono',monospace;font-size:.85rem;margin
 .vbar{display:flex;align-items:center;justify-content:center;gap:.75rem;margin-bottom:.5rem}
 .go{display:flex;align-items:center;gap:.4rem;margin:0;font-weight:400}
 .go input{width:4.5rem;text-align:center;font-family:'Space Mono',monospace}
+.mv{padding:.05rem .55rem;border-width:1px;margin-left:.25rem}
+#fl{margin:0 0 .75rem}
+[hidden]{display:none!important}
+.inc{display:block;margin:.6rem 0;font-weight:400}
+.inc input[type=checkbox]{width:auto;margin-right:.4rem}
 </style>
 </head>
 <body>
@@ -70,8 +75,10 @@ textarea{height:16rem;font-family:'Space Mono',monospace;font-size:.85rem;margin
 <main>
   <section>
     <h2>PDF da dividere</h2>
-    <input type="file" id="f" accept="application/pdf" aria-label="Scegli il PDF">
+    <input type="file" id="f" accept="application/pdf" multiple aria-label="Scegli il PDF">
+    <p class="hint">Puoi scegliere più PDF insieme: vengono uniti in uno solo, in ordine di nome.</p>
     <p class="hint"><span id="tot">Nessun file</span></p>
+    <ol id="fl"></ol>
     <div class="vbar"><button id="prev" type="button" aria-label="Pagina precedente">‹</button><label class="go" for="pn">Pagina <input id="pn" type="number" min="1" value="1"> di <span id="pt">0</span></label><button id="next" type="button" aria-label="Pagina successiva">›</button></div>
     <div id="pv" tabindex="0" aria-label="Anteprima del PDF"></div>
   </section>
@@ -85,6 +92,10 @@ textarea{height:16rem;font-family:'Space Mono',monospace;font-size:.85rem;margin
       </div>
     </div>
 
+    <div id="mo" hidden>
+      <label class="inc"><input type="checkbox" id="a5" checked> Marcia: dividi ogni foglio in due parti A5 e togli le pagine uguali</label>
+      <label class="inc" for="dir">Disposizione delle parti sul foglio <select id="dir"><option value="auto">Automatica</option><option value="lr">Affiancate</option><option value="tb">Una sopra l’altra</option></select></label>
+    </div>
     <h2 style="margin-top:1.5rem">Parti nell’ordine del PDF</h2>
     <p class="hint">Scrivi gli strumenti come compaiono nel PDF. Vengono riordinati da soli secondo l’ordine classico. Per le percussioni scrivi «Percussioni - Glockenspiel». Per la partitura scrivi «Partitura».</p>
     <div class="cap"><span>Strumento</span><span>Da pag.</span><span>A pag.</span><span></span></div>
@@ -255,18 +266,89 @@ $('#pv').onkeydown = e => {
 };
 
 // PDF di partenza
+let srcs = [];
 $('#f').onchange = async e => {
-  const f = e.target.files[0]; if (!f) return;
+  const fs = [...e.target.files]; if (!fs.length) return;
+  $('#tot').textContent = 'Carico…';
   try {
-    const buf = await f.arrayBuffer();
-    pdf = await PDFLib.PDFDocument.load(buf, {ignoreEncryption: true});
-    total = pdf.getPageCount();
-    openViewer(buf.slice(0));
-    $('#tot').textContent = total + ' pagine';
-    if (!$('#tit').value) $('#tit').value = f.name.replace(/\.pdf$/i, '');
-  } catch (err) { pdf = null; $('#tot').textContent = 'Impossibile aprire il PDF'; }
-  sum();
+    srcs = [];
+    for (const f of fs) srcs.push({name: f.name, buf: await f.arrayBuffer()});
+    srcs.sort((a, b) => a.name.localeCompare(b.name, 'it', {numeric: true}));
+    if (!$('#tit').value) $('#tit').value = srcs[0].name.replace(/\.pdf$/i, '');
+    await rebuild();
+  } catch (err) { pdf = null; total = 0; $('#tot').textContent = 'Impossibile aprire il PDF'; sum(); }
 };
+// Un solo PDF resta com'è; più PDF vengono uniti in uno, nell'ordine dell'elenco
+async function rebuild() {
+  let bytes; const spans = [];
+  if (srcs.length === 1) bytes = srcs[0].buf;
+  else {
+    const out = await PDFLib.PDFDocument.create();
+    for (const s of srcs) {
+      const d = await PDFLib.PDFDocument.load(s.buf, {ignoreEncryption: true}), a = out.getPageCount() + 1;
+      (await out.copyPages(d, d.getPageIndices())).forEach(p => out.addPage(p));
+      spans.push([a, out.getPageCount()]);
+    }
+    bytes = await out.save();
+  }
+  let note = '';
+  if ($('#cat').value === 'marce' && $('#a5').checked) {
+    $('#tot').textContent = 'Divido i fogli in due parti…';
+    const m = await PDFLib.PDFDocument.load(bytes, {ignoreEncryption: true}), h = await halves(m, $('#dir').value);
+    $('#tot').textContent = 'Tolgo le pagine uguali…';
+    const r = await dedupe(h);
+    bytes = await r.doc.save();
+    note = ` · da ${m.getPageCount()} fogli a ${h.getPageCount()} parti` + (r.removed.length ? `, tolte ${r.removed.length} uguali a una già presente` : ', nessuna ripetuta');
+  }
+  pdf = await PDFLib.PDFDocument.load(bytes, {ignoreEncryption: true});
+  total = pdf.getPageCount();
+  openViewer(bytes.slice(0));
+  $('#tot').textContent = (srcs.length > 1 ? srcs.length + ' file uniti · ' : '') + total + ' pagine' + note;
+  $('#fl').innerHTML = srcs.length > 1 ? srcs.map((s, i) => `<li><span>${i + 1}. ${esc(s.name)}</span><span class="lead"></span><code>${note ? 'fogli' : 'pag.'} ${spans[i][0]}–${spans[i][1]}</code><button type="button" class="mv" data-m="${i}:-1" aria-label="Sposta su">↑</button><button type="button" class="mv" data-m="${i}:1" aria-label="Sposta giù">↓</button></li>`).join('') : '';
+  sum();
+}
+$('#fl').addEventListener('click', async e => {
+  const m = e.target.dataset.m; if (!m) return;
+  const [i, d] = m.split(':').map(Number), j = i + d;
+  if (j < 0 || j >= srcs.length) return;
+  [srcs[i], srcs[j]] = [srcs[j], srcs[i]];
+  try { await rebuild(); } catch (err) { $('#tot').textContent = 'Impossibile unire i PDF'; }
+});
+// Marce: ogni foglio diventa due pagine (metà sinistra e destra, oppure alta e bassa)
+async function halves(m, dir) {
+  const out = await PDFLib.PDFDocument.create();
+  for (const p of m.getPages()) {
+    const b = p.getMediaBox(), w = b.width, h = b.height, side = dir === 'auto' ? (w >= h ? 'lr' : 'tb') : dir;
+    const boxes = side === 'lr'
+      ? [{left: b.x, right: b.x + w / 2, bottom: b.y, top: b.y + h}, {left: b.x + w / 2, right: b.x + w, bottom: b.y, top: b.y + h}]
+      : [{left: b.x, right: b.x + w, bottom: b.y + h / 2, top: b.y + h}, {left: b.x, right: b.x + w, bottom: b.y, top: b.y + h / 2}];
+    for (const bb of boxes) {
+      const e = await out.embedPage(p, bb), np = out.addPage([e.width, e.height]);
+      np.drawPage(e, {x: 0, y: 0});
+    }
+  }
+  return out;
+}
+// Toglie le pagine che, disegnate, risultano uguali a una già tenuta
+const pixDiff = (a, b) => { let n = 0; for (let i = 0; i < a.length; i++) if (Math.abs(a[i] - b[i]) > 64) n++; return n / a.length; };
+async function dedupe(doc) {
+  const pj = await pdfjsLib.getDocument({data: new Uint8Array(await doc.save())}).promise, keep = [], seen = [], removed = [];
+  for (let i = 1; i <= pj.numPages; i++) {
+    const p = await pj.getPage(i), v0 = p.getViewport({scale: 1}), v = p.getViewport({scale: 220 / v0.width});
+    const c = document.createElement('canvas'); c.width = Math.round(v.width); c.height = Math.round(v.height);
+    const ctx = c.getContext('2d', {willReadFrequently: true}); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+    await p.render({canvasContext: ctx, viewport: v}).promise;
+    const d = ctx.getImageData(0, 0, c.width, c.height).data, g = new Uint8Array(c.width * c.height);
+    for (let k = 0; k < g.length; k++) g[k] = d[4 * k] * .3 + d[4 * k + 1] * .59 + d[4 * k + 2] * .11;
+    if (seen.some(t => t.length === g.length && pixDiff(t, g) < .005)) removed.push(i); else { seen.push(g); keep.push(i - 1); }
+  }
+  const out = await PDFLib.PDFDocument.create();
+  (await out.copyPages(doc, keep)).forEach(x => out.addPage(x));
+  return {doc: out, removed};
+}
+const again = () => { if (srcs.length) rebuild().catch(e => { $('#tot').textContent = 'Impossibile elaborare i PDF: ' + e.message; }); };
+$('#cat').onchange = () => { $('#mo').hidden = $('#cat').value !== 'marce'; again(); };
+$('#a5').onchange = $('#dir').onchange = again;
 async function cut(a, b) {
   const d = await PDFLib.PDFDocument.create();
   (await d.copyPages(pdf, Array.from({length: b - a + 1}, (_, i) => a - 1 + i))).forEach(x => d.addPage(x));
@@ -289,16 +371,16 @@ function expired() {
 }
 $('#login').onclick = () => {
   if (!window.google) { $('#st').textContent = 'Servizio Google non raggiungibile'; return; }
-  let hint; try { hint = localStorage.getItem('hint') || undefined; } catch (e) {}
+  try { localStorage.removeItem('hint'); } catch (e) {}
   google.accounts.oauth2.initTokenClient({
-    client_id: CFG.CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive openid profile', hd: 'corpomusicalegverdi.it', login_hint: hint,
+    client_id: CFG.CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive openid profile', hd: 'corpomusicalegverdi.it',
     callback: async r => {
       if (!r.access_token) return;
       tok = r.access_token; let name = '';
       try {
         const u = await g('https://www.googleapis.com/oauth2/v3/userinfo');
         name = u.given_name || u.name || '';
-        try { localStorage.setItem('hint', u.email); } catch (e) {}
+        
       } catch (e) {}
       SS.set('sess', JSON.stringify({t: tok, n: name, e: Date.now() + ((Number(r.expires_in) || 3600) - 120) * 1000}));
       connected(name);
