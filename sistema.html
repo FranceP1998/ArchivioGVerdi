@@ -41,6 +41,7 @@ ol li{display:grid;grid-template-columns:1fr 1.5rem 1fr;gap:.5rem;padding:.15rem
 .u{margin:.5rem 0 .5rem 1rem}
 .warn{color:var(--wine);font-weight:600}
 pre{white-space:pre-wrap;margin:.75rem 0 0}
+.rnb{float:right;margin-left:.5rem;padding:.1rem .8rem;font-size:.9rem}
 .bar input[type=text]{padding:.5rem .6rem;border:1px solid var(--navy);border-radius:6px;background:#fff;font:inherit;flex:1;min-width:14rem;max-width:100%}
 .u input{padding:.4rem .5rem;border:1px solid var(--navy);border-radius:6px;max-width:100%}
 .u button{padding:.25rem .8rem}
@@ -69,18 +70,9 @@ pre{white-space:pre-wrap;margin:.75rem 0 0}
     <h2>2. Risultato</h2>
     <p id="sum" class="mono">Nessuna analisi ancora.</p>
     <div id="list"></div>
+    <div id="okl"></div>
     <p><button id="ap" class="main" disabled>Applica le modifiche selezionate</button></p>
     <pre id="log"></pre>
-  </section>
-  <section>
-    <h2>3. Rinomina un brano</h2>
-    <p>Cambia il nome della cartella e il nome del brano davanti a tutti i file: le parti, «Parti» e «Partitura». Prima vedi l’anteprima.</p>
-    <div class="bar"><input id="rb" type="text" list="dlr" placeholder="Brano da rinominare" aria-label="Brano da rinominare"></div>
-    <datalist id="dlr"></datalist>
-    <div class="bar"><input id="rn" type="text" placeholder="Nuovo nome" aria-label="Nuovo nome"><button id="rp" disabled>Anteprima</button></div>
-    <div id="rv"></div>
-    <p><button id="ra" class="main" hidden>Applica la rinomina</button></p>
-    <pre id="rlog"></pre>
   </section>
 </main>
 
@@ -95,7 +87,7 @@ const LBL = {concerto: 'Brani da concerto', marce: 'Marce'};
 const $ = s => document.querySelector(s), low = s => s.toLowerCase().trim(), pad = n => String(n).padStart(2, '0');
 const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const API = 'https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives';
-let tok, brani = [], L = [], res = [], alias = {};
+let tok, brani = [], L = [], res = [], alias = {}, okOpen = false;
 
 // ---- Accesso (sessione condivisa con le altre pagine) ----
 const SS = {
@@ -166,7 +158,7 @@ async function start() {
         r.files.forEach(f => brani.push({...f, k})); pt = r.nextPageToken;
       } while (pt);
     }
-    brani.sort((a, b) => a.name.localeCompare(b.name, 'it')); fillR();
+    brani.sort((a, b) => a.name.localeCompare(b.name, 'it'));
     $('#pg').textContent = brani.length + ' brani trovati. Premi Analizza.'; $('#an').disabled = false;
   } catch (e) { $('#pg').textContent = 'Errore: ' + e.message; }
 }
@@ -242,12 +234,14 @@ function render() {
   $('#sum').textContent = `${res.length} brani analizzati: ${res.length - todo.length} a posto, ${todo.length} da sistemare` + (blocked ? `, di cui ${blocked} con nomi da assegnare` : '') + '.';
   $('#list').innerHTML = todo.map(r => {
     const i = res.indexOf(r), ch = r.plan.rows.filter(x => x.changed);
-    return `<details data-i="${i}" ${r.open ? 'open' : ''}><summary><b>${esc(r.b.name)}</b><small>${LBL[r.b.k]} · ${ch.length} da rinominare${r.plan.unknown.length ? ' · ' + r.plan.unknown.length + ' da assegnare' : ''}</small></summary>
+    return `<details data-i="${i}" ${r.open ? 'open' : ''}><summary><button type="button" class="rnb" data-i="${i}">Rinomina</button><b>${esc(r.b.name)}</b><small>${LBL[r.b.k]} · ${ch.length} da rinominare${r.plan.unknown.length ? ' · ' + r.plan.unknown.length + ' da assegnare' : ''}</small></summary>
       ${r.plan.unknown.map(u => { const gs = guess(u.raw), k = esc(key(u.raw)); return `<p class="u"><span class="warn">«${esc(u.raw)}» non riconosciuto</span><br>Assegna a: <select class="sl" data-k="${k}"><option value="">Scegli lo strumento</option>${gs ? `<option value="${esc(gs)}">Suggerito: ${esc(gs)}</option>` : ''}${L.map(x => `<option>${esc(x)}</option>`).join('')}</select><br>Oppure aggiungi un nuovo strumento: <input class="nn" value="${esc(u.raw)}" aria-label="Nome del nuovo strumento"> dopo <select class="np" aria-label="Posizione nell’ordine">${L.map(x => `<option${x === 'Pianoforte' ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select> <button type="button" class="add" data-k="${k}">Aggiungi e assegna</button></p>`; }).join('')}
       <ol>${ch.map(x => `<li><span>${esc(x.was)}</span><span>→</span><span>${esc(x.nw)}</span></li>`).join('')}</ol>
       <label class="inc"><input type="checkbox" class="cb" data-w="ap" data-i="${i}" ${r.apply ? 'checked' : ''} ${r.plan.unknown.length ? 'disabled' : ''}> Applica a questo brano</label>
       <label class="inc"><input type="checkbox" class="cb" data-w="rg" data-i="${i}" ${r.regen ? 'checked' : ''}> Rigenera il file «Parti» con il nuovo ordine</label></details>`;
   }).join('');
+  const okl = res.filter(r => r.ok);
+  $('#okl').innerHTML = okl.length ? `<details id="okd" ${okOpen ? 'open' : ''}><summary>Brani già a posto (${okl.length})</summary>${okl.map(r => `<p class="u"><button type="button" class="rnb" data-i="${res.indexOf(r)}">Rinomina</button> ${esc(r.b.name)} <small>${LBL[r.b.k]}</small></p>`).join('')}</details>` : '';
   $('#ap').disabled = !res.some(r => !r.ok && r.apply && !r.plan.unknown.length);
 }
 $('#list').addEventListener('change', e => {
@@ -270,6 +264,7 @@ $('#list').addEventListener('click', async e => {
   res.forEach(replan); render();
 });
 $('#list').addEventListener('toggle', e => { const d = e.target; if (d.dataset && d.dataset.i) res[+d.dataset.i].open = d.open; }, true);
+$('#okl').addEventListener('toggle', e => { okOpen = e.target.open; }, true);
 
 // ---- Applicazione ----
 async function regen(r) {
@@ -302,45 +297,31 @@ $('#ap').onclick = async () => {
   render();
 };
 
-// ---- Rinomina di un brano ----
-let dupN = {}, rjob = null;
-const labR = b => dupN[low(b.name)] > 1 ? `${b.name} — ${LBL[b.k]}` : b.name;
-function fillR() {
-  dupN = {}; brani.forEach(b => { dupN[low(b.name)] = (dupN[low(b.name)] || 0) + 1; });
-  $('#dlr').innerHTML = brani.map(b => `<option value="${esc(labR(b))}">`).join('');
+// Rinomina un brano: la cartella e il nome del brano davanti a ogni file
+async function renameBrano(b, list) {
+  const nn = (prompt(`Nuovo nome per «${b.name}»`, b.name) || '').trim();
+  if (!nn || nn === b.name) return false;
+  if (/[\\/]/.test(nn)) { alert('Il nome non può contenere / o \\.'); return false; }
+  if (list.some(x => x.k === b.k && x.id !== b.id && x.name.toLowerCase() === nn.toLowerCase())) { alert('Esiste già un brano con questo nome in «' + LBL[b.k] + '».'); return false; }
+  const q = `'${b.id}' in parents and trashed=false`;
+  const r = await g(`${API}&pageSize=200&orderBy=name&fields=files(id,name)&q=${encodeURIComponent(q)}`);
+  const re = /^(.*?)( - (?:\d+\s|parti(?:\.pdf)?$|partitura(?:\.pdf)?$))/i;
+  const files = r.files.map(f => { const m = f.name.match(re); return {f, nw: m ? nn + f.name.slice(m[1].length) : null}; }).filter(x => x.nw && x.nw !== x.f.name);
+  const sample = files.slice(0, 6).map(x => `${x.f.name} → ${x.nw}`).join('\n') + (files.length > 6 ? `\n… e altri ${files.length - 6}` : '');
+  if (!confirm(`Rinomino la cartella e ${files.length} file.\n\nCartella: ${b.name} → ${nn}\n${sample}\n\nProcedo?`)) return false;
+  const patch = (id, name) => g(`https://www.googleapis.com/drive/v3/files/${id}?supportsAllDrives=true`, {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name})});
+  for (const x of files) await patch(x.f.id, x.nw);
+  await patch(b.id, nn); b.name = nn;
+  return true;
 }
-const findR = v => { const x = low(v); let c = brani.filter(b => low(labR(b)) === x); if (!c.length) c = brani.filter(b => low(b.name) === x); return c.length === 1 ? c[0] : null; };
-$('#rb').oninput = $('#rn').oninput = () => { $('#rp').disabled = !(tok && findR($('#rb').value) && $('#rn').value.trim()); $('#ra').hidden = true; $('#rv').innerHTML = ''; rjob = null; };
-$('#rp').onclick = async () => {
-  const b = findR($('#rb').value), nn = $('#rn').value.trim(), out = m => { $('#rv').innerHTML = m; };
-  if (!b) return;
-  if (/[\\/]/.test(nn)) return out('<p class="warn">Il nome non può contenere / o \\.</p>');
-  if (nn === b.name) return out('<p class="warn">Il nuovo nome è uguale a quello attuale.</p>');
-  if (brani.some(x => x.k === b.k && x.id !== b.id && low(x.name) === low(nn))) return out(`<p class="warn">Esiste già un brano con questo nome in «${LBL[b.k]}».</p>`);
-  try {
-    const q = `'${b.id}' in parents and trashed=false`;
-    const r = await g(`${API}&pageSize=200&orderBy=name&fields=files(id,name)&q=${encodeURIComponent(q)}`);
-    const re = /^(.*?)( - (?:\d+\s|parti(?:\.pdf)?$|partitura(?:\.pdf)?$))/i;
-    const files = r.files.map(f => { const m = f.name.match(re); return {f, nw: m ? nn + f.name.slice(m[1].length) : null}; });
-    rjob = {b, nn, files};
-    out(`<ol><li><span><b>Cartella</b> ${esc(b.name)}</span><span>→</span><span>${esc(nn)}</span></li>${files.filter(x => x.nw && x.nw !== x.f.name).map(x => `<li><span>${esc(x.f.name)}</span><span>→</span><span>${esc(x.nw)}</span></li>`).join('')}</ol>`
-      + (files.some(x => !x.nw) ? `<p class="mono">Non toccati (formato del nome non riconosciuto): ${esc(files.filter(x => !x.nw).map(x => x.f.name).join(', '))}.</p>` : ''));
-    $('#ra').hidden = false;
-  } catch (e) { out('<p class="warn">Errore: ' + esc(e.message) + '</p>'); }
-};
-$('#ra').onclick = async () => {
-  if (!rjob) return;
-  const {b, nn, files} = rjob, log = m => { $('#rlog').textContent += m + '\n'; }, patch = (id, name) => g(`https://www.googleapis.com/drive/v3/files/${id}?supportsAllDrives=true`, {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name})});
-  $('#ra').disabled = true; $('#rlog').textContent = '';
-  try {
-    for (const x of files) if (x.nw && x.nw !== x.f.name) { await patch(x.f.id, x.nw); log('✓ ' + x.nw); }
-    await patch(b.id, nn); log(`✓ Cartella rinominata in «${nn}»`);
-    b.name = nn; brani.sort((p, q) => p.name.localeCompare(q.name, 'it')); fillR();
-    res = res.filter(r => r.b.id !== b.id); render();
-    $('#rb').value = labR(b); $('#rn').value = ''; $('#rv').innerHTML = ''; $('#ra').hidden = true; rjob = null;
-  } catch (e) { log('Errore: ' + e.message + ' Rifai l’anteprima e applica di nuovo: i file già rinominati vengono saltati.'); }
-  $('#ra').disabled = false;
-};
+document.querySelector('main').addEventListener('click', async e => {
+  const t = e.target.closest('.rnb'); if (!t) return;
+  e.preventDefault(); t.disabled = true;
+  const r = res[+t.dataset.i];
+  try { if (await renameBrano(r.b, brani)) { r.items = (await scan(r.b)).items; replan(r); render(); } }
+  catch (err) { alert('Errore: ' + err.message); }
+  t.disabled = false;
+});
 </script>
 </body>
 </html>
