@@ -41,6 +41,7 @@ a{color:var(--navy)}
 .bad{color:var(--wine);font-weight:600}
 .pr{float:right;margin-left:.75rem;padding:.15rem .8rem;border:2px solid var(--orange);background:var(--orange);color:var(--navy);border-radius:999px;font-weight:600;text-decoration:none;font-size:.9rem}
 .pr:hover{background:var(--gold);border-color:var(--gold)}
+.rnb{float:right;margin-left:.5rem;padding:.15rem .8rem;font-size:.9rem}
 </style>
 </head>
 <body>
@@ -143,7 +144,7 @@ function render() {
   const t = norm($('#q').value.trim()), c = $('#cat').value;
   const l = all.filter(b => (!c || b.k === c) && norm(b.name).includes(t));
   $('#msg').className = ''; $('#msg').textContent = l.length === 1 ? '1 brano' : l.length + ' brani';
-  $('#list').innerHTML = l.map(b => `<details data-id="${b.id}"><summary><a class="pr" href="stampa.html?id=${b.id}">Stampa</a>${esc(b.name)}<small>${LBL[b.k]}</small></summary><ol><li>Carico…</li></ol></details>`).join('');
+  $('#list').innerHTML = l.map(b => `<details data-id="${b.id}"><summary><a class="pr" href="stampa.html?id=${b.id}">Stampa</a><button type="button" class="rnb" data-id="${b.id}">Rinomina</button>${esc(b.name)}<small>${LBL[b.k]}</small></summary><ol><li>Carico…</li></ol></details>`).join('');
 }
 $('#q').oninput = render; $('#cat').onchange = render;
 
@@ -157,6 +158,31 @@ $('#list').addEventListener('toggle', async e => {
     ol.innerHTML = r.files.map(f => `<li><a href="${f.webViewLink}" target="_blank" rel="noopener">${esc(f.name.replace(/\.pdf$/i, ''))}</a></li>`).join('') || '<li>Cartella vuota</li>';
   } catch (err) { ol.innerHTML = `<li class="bad">${esc(err.message)}</li>`; d.dataset.done = ''; }
 }, true);
+// Rinomina un brano: la cartella e il nome del brano davanti a ogni file
+async function renameBrano(b, list) {
+  const nn = (prompt(`Nuovo nome per «${b.name}»`, b.name) || '').trim();
+  if (!nn || nn === b.name) return false;
+  if (/[\\/]/.test(nn)) { alert('Il nome non può contenere / o \\.'); return false; }
+  if (list.some(x => x.k === b.k && x.id !== b.id && x.name.toLowerCase() === nn.toLowerCase())) { alert('Esiste già un brano con questo nome in «' + LBL[b.k] + '».'); return false; }
+  const q = `'${b.id}' in parents and trashed=false`;
+  const r = await g(`${API}&pageSize=200&orderBy=name&fields=files(id,name)&q=${encodeURIComponent(q)}`);
+  const re = /^(.*?)( - (?:\d+\s|parti(?:\.pdf)?$|partitura(?:\.pdf)?$))/i;
+  const files = r.files.map(f => { const m = f.name.match(re); return {f, nw: m ? nn + f.name.slice(m[1].length) : null}; }).filter(x => x.nw && x.nw !== x.f.name);
+  const sample = files.slice(0, 6).map(x => `${x.f.name} → ${x.nw}`).join('\n') + (files.length > 6 ? `\n… e altri ${files.length - 6}` : '');
+  if (!confirm(`Rinomino la cartella e ${files.length} file.\n\nCartella: ${b.name} → ${nn}\n${sample}\n\nProcedo?`)) return false;
+  const patch = (id, name) => g(`https://www.googleapis.com/drive/v3/files/${id}?supportsAllDrives=true`, {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name})});
+  for (const x of files) await patch(x.f.id, x.nw);
+  await patch(b.id, nn); b.name = nn;
+  return true;
+}
+$('#list').addEventListener('click', async e => {
+  const t = e.target.closest('.rnb'); if (!t) return;
+  e.preventDefault(); t.disabled = true;
+  const b = all.find(x => x.id === t.dataset.id);
+  try { if (await renameBrano(b, all)) { all.sort((p, q) => p.name.localeCompare(q.name, 'it')); render(); } }
+  catch (err) { alert('Errore: ' + err.message); }
+  t.disabled = false;
+});
 </script>
 </body>
 </html>
