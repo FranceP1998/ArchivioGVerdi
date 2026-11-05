@@ -93,7 +93,9 @@ textarea{height:16rem;font-family:'Space Mono',monospace;font-size:.85rem;margin
     </div>
 
     <div id="mo" hidden>
-      <label class="inc"><input type="checkbox" id="a5" checked> Marcia: dividi ogni foglio in due parti A5 e togli le pagine uguali</label>
+      <label class="inc"><input type="checkbox" id="a5" checked> Marcia: dividi ogni foglio in due parti A5</label>
+      <label class="inc" for="ns">Fogli da non dividere (per esempio la partitura A4 nello stesso PDF)<input id="ns" placeholder="per esempio 1-8"></label>
+      <label class="inc"><input type="checkbox" id="orig"> Mostra i fogli originali (solo per guardare; le pagine da inserire restano quelle del PDF diviso)</label>
       <label class="inc" for="dir">Disposizione delle parti sul foglio <select id="dir"><option value="auto">Automatica</option><option value="lr">Affiancate</option><option value="tb">Una sopra l’altra</option></select></label>
     </div>
     <h2 style="margin-top:1.5rem">Parti nell’ordine del PDF</h2>
@@ -266,7 +268,7 @@ $('#pv').onkeydown = e => {
 };
 
 // PDF di partenza
-let srcs = [];
+let srcs = [], origBytes, procBytes;
 $('#f').onchange = async e => {
   const fs = [...e.target.files]; if (!fs.length) return;
   $('#tot').textContent = 'Carico…';
@@ -292,17 +294,17 @@ async function rebuild() {
     bytes = await out.save();
   }
   let note = '';
+  origBytes = bytes;
   if ($('#cat').value === 'marce' && $('#a5').checked) {
     $('#tot').textContent = 'Divido i fogli in due parti…';
-    const m = await PDFLib.PDFDocument.load(bytes, {ignoreEncryption: true}), h = await halves(m, $('#dir').value);
-    $('#tot').textContent = 'Tolgo le pagine uguali…';
-    const r = await dedupe(h);
-    bytes = await r.doc.save();
-    note = ` · da ${m.getPageCount()} fogli a ${h.getPageCount()} parti` + (r.removed.length ? `, tolte ${r.removed.length} uguali a una già presente` : ', nessuna ripetuta');
+    const m = await PDFLib.PDFDocument.load(bytes, {ignoreEncryption: true}), h = await halves(m, $('#dir').value, parseSkip($('#ns').value));
+    bytes = await h.save();
+    note = ` · da ${m.getPageCount()} fogli a ${h.getPageCount()} pagine`;
   }
+  procBytes = bytes;
   pdf = await PDFLib.PDFDocument.load(bytes, {ignoreEncryption: true});
   total = pdf.getPageCount();
-  openViewer(bytes.slice(0));
+  openViewer((($('#orig').checked && note) ? origBytes : bytes).slice(0));
   $('#tot').textContent = (srcs.length > 1 ? srcs.length + ' file uniti · ' : '') + total + ' pagine' + note;
   $('#fl').innerHTML = srcs.length > 1 ? srcs.map((s, i) => `<li><span>${i + 1}. ${esc(s.name)}</span><span class="lead"></span><code>${note ? 'fogli' : 'pag.'} ${spans[i][0]}–${spans[i][1]}</code><button type="button" class="mv" data-m="${i}:-1" aria-label="Sposta su">↑</button><button type="button" class="mv" data-m="${i}:1" aria-label="Sposta giù">↓</button></li>`).join('') : '';
   sum();
@@ -315,9 +317,15 @@ $('#fl').addEventListener('click', async e => {
   try { await rebuild(); } catch (err) { $('#tot').textContent = 'Impossibile unire i PDF'; }
 });
 // Marce: ogni foglio diventa due pagine (metà sinistra e destra, oppure alta e bassa)
-async function halves(m, dir) {
+const parseSkip = t => {
+  const s = new Set();
+  t.replace(/\s*[-–]\s*/g, '-').split(/[,;\s]+/).filter(Boolean).forEach(x => { const r = x.match(/^(\d+)(?:-(\d+))?$/); if (r) for (let i = +r[1]; i <= +(r[2] || r[1]); i++) s.add(i); });
+  return s;
+};
+async function halves(m, dir, skip) {
   const out = await PDFLib.PDFDocument.create();
-  for (const p of m.getPages()) {
+  for (const [pi, p] of m.getPages().entries()) {
+    if (skip.has(pi + 1)) { const [c] = await out.copyPages(m, [pi]); out.addPage(c); continue; }
     const b = p.getMediaBox(), w = b.width, h = b.height, side = dir === 'auto' ? (w >= h ? 'lr' : 'tb') : dir;
     const boxes = side === 'lr'
       ? [{left: b.x, right: b.x + w / 2, bottom: b.y, top: b.y + h}, {left: b.x + w / 2, right: b.x + w, bottom: b.y, top: b.y + h}]
@@ -329,26 +337,10 @@ async function halves(m, dir) {
   }
   return out;
 }
-// Toglie le pagine che, disegnate, risultano uguali a una già tenuta
-const pixDiff = (a, b) => { let n = 0; for (let i = 0; i < a.length; i++) if (Math.abs(a[i] - b[i]) > 64) n++; return n / a.length; };
-async function dedupe(doc) {
-  const pj = await pdfjsLib.getDocument({data: new Uint8Array(await doc.save())}).promise, keep = [], seen = [], removed = [];
-  for (let i = 1; i <= pj.numPages; i++) {
-    const p = await pj.getPage(i), v0 = p.getViewport({scale: 1}), v = p.getViewport({scale: 220 / v0.width});
-    const c = document.createElement('canvas'); c.width = Math.round(v.width); c.height = Math.round(v.height);
-    const ctx = c.getContext('2d', {willReadFrequently: true}); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
-    await p.render({canvasContext: ctx, viewport: v}).promise;
-    const d = ctx.getImageData(0, 0, c.width, c.height).data, g = new Uint8Array(c.width * c.height);
-    for (let k = 0; k < g.length; k++) g[k] = d[4 * k] * .3 + d[4 * k + 1] * .59 + d[4 * k + 2] * .11;
-    if (seen.some(t => t.length === g.length && pixDiff(t, g) < .005)) removed.push(i); else { seen.push(g); keep.push(i - 1); }
-  }
-  const out = await PDFLib.PDFDocument.create();
-  (await out.copyPages(doc, keep)).forEach(x => out.addPage(x));
-  return {doc: out, removed};
-}
 const again = () => { if (srcs.length) rebuild().catch(e => { $('#tot').textContent = 'Impossibile elaborare i PDF: ' + e.message; }); };
 $('#cat').onchange = () => { $('#mo').hidden = $('#cat').value !== 'marce'; again(); };
-$('#a5').onchange = $('#dir').onchange = again;
+$('#a5').onchange = $('#dir').onchange = $('#ns').onchange = again;
+$('#orig').onchange = () => { if (procBytes) openViewer(($('#orig').checked ? origBytes : procBytes).slice(0)); };
 async function cut(a, b) {
   const d = await PDFLib.PDFDocument.create();
   (await d.copyPages(pdf, Array.from({length: b - a + 1}, (_, i) => a - 1 + i))).forEach(x => d.addPage(x));
