@@ -41,6 +41,7 @@ ol li{display:grid;grid-template-columns:1fr 1.5rem 1fr;gap:.5rem;padding:.15rem
 .u{margin:.5rem 0 .5rem 1rem}
 .warn{color:var(--wine);font-weight:600}
 pre{white-space:pre-wrap;margin:.75rem 0 0}
+.bar input[type=text]{padding:.5rem .6rem;border:1px solid var(--navy);border-radius:6px;background:#fff;font:inherit;flex:1;min-width:14rem;max-width:100%}
 .u input{padding:.4rem .5rem;border:1px solid var(--navy);border-radius:6px;max-width:100%}
 .u button{padding:.25rem .8rem}
 </style>
@@ -70,6 +71,16 @@ pre{white-space:pre-wrap;margin:.75rem 0 0}
     <div id="list"></div>
     <p><button id="ap" class="main" disabled>Applica le modifiche selezionate</button></p>
     <pre id="log"></pre>
+  </section>
+  <section>
+    <h2>3. Rinomina un brano</h2>
+    <p>Cambia il nome della cartella e il nome del brano davanti a tutti i file: le parti, «Parti» e «Partitura». Prima vedi l’anteprima.</p>
+    <div class="bar"><input id="rb" type="text" list="dlr" placeholder="Brano da rinominare" aria-label="Brano da rinominare"></div>
+    <datalist id="dlr"></datalist>
+    <div class="bar"><input id="rn" type="text" placeholder="Nuovo nome" aria-label="Nuovo nome"><button id="rp" disabled>Anteprima</button></div>
+    <div id="rv"></div>
+    <p><button id="ra" class="main" hidden>Applica la rinomina</button></p>
+    <pre id="rlog"></pre>
   </section>
 </main>
 
@@ -155,7 +166,7 @@ async function start() {
         r.files.forEach(f => brani.push({...f, k})); pt = r.nextPageToken;
       } while (pt);
     }
-    brani.sort((a, b) => a.name.localeCompare(b.name, 'it'));
+    brani.sort((a, b) => a.name.localeCompare(b.name, 'it')); fillR();
     $('#pg').textContent = brani.length + ' brani trovati. Premi Analizza.'; $('#an').disabled = false;
   } catch (e) { $('#pg').textContent = 'Errore: ' + e.message; }
 }
@@ -289,6 +300,46 @@ $('#ap').onclick = async () => {
     log('Fatto. I brani sistemati risultano ora a posto.');
   } catch (e) { log('Errore: ' + e.message); }
   render();
+};
+
+// ---- Rinomina di un brano ----
+let dupN = {}, rjob = null;
+const labR = b => dupN[low(b.name)] > 1 ? `${b.name} — ${LBL[b.k]}` : b.name;
+function fillR() {
+  dupN = {}; brani.forEach(b => { dupN[low(b.name)] = (dupN[low(b.name)] || 0) + 1; });
+  $('#dlr').innerHTML = brani.map(b => `<option value="${esc(labR(b))}">`).join('');
+}
+const findR = v => { const x = low(v); let c = brani.filter(b => low(labR(b)) === x); if (!c.length) c = brani.filter(b => low(b.name) === x); return c.length === 1 ? c[0] : null; };
+$('#rb').oninput = $('#rn').oninput = () => { $('#rp').disabled = !(tok && findR($('#rb').value) && $('#rn').value.trim()); $('#ra').hidden = true; $('#rv').innerHTML = ''; rjob = null; };
+$('#rp').onclick = async () => {
+  const b = findR($('#rb').value), nn = $('#rn').value.trim(), out = m => { $('#rv').innerHTML = m; };
+  if (!b) return;
+  if (/[\\/]/.test(nn)) return out('<p class="warn">Il nome non può contenere / o \\.</p>');
+  if (nn === b.name) return out('<p class="warn">Il nuovo nome è uguale a quello attuale.</p>');
+  if (brani.some(x => x.k === b.k && x.id !== b.id && low(x.name) === low(nn))) return out(`<p class="warn">Esiste già un brano con questo nome in «${LBL[b.k]}».</p>`);
+  try {
+    const q = `'${b.id}' in parents and trashed=false`;
+    const r = await g(`${API}&pageSize=200&orderBy=name&fields=files(id,name)&q=${encodeURIComponent(q)}`);
+    const re = /^(.*?)( - (?:\d+\s|parti(?:\.pdf)?$|partitura(?:\.pdf)?$))/i;
+    const files = r.files.map(f => { const m = f.name.match(re); return {f, nw: m ? nn + f.name.slice(m[1].length) : null}; });
+    rjob = {b, nn, files};
+    out(`<ol><li><span><b>Cartella</b> ${esc(b.name)}</span><span>→</span><span>${esc(nn)}</span></li>${files.filter(x => x.nw && x.nw !== x.f.name).map(x => `<li><span>${esc(x.f.name)}</span><span>→</span><span>${esc(x.nw)}</span></li>`).join('')}</ol>`
+      + (files.some(x => !x.nw) ? `<p class="mono">Non toccati (formato del nome non riconosciuto): ${esc(files.filter(x => !x.nw).map(x => x.f.name).join(', '))}.</p>` : ''));
+    $('#ra').hidden = false;
+  } catch (e) { out('<p class="warn">Errore: ' + esc(e.message) + '</p>'); }
+};
+$('#ra').onclick = async () => {
+  if (!rjob) return;
+  const {b, nn, files} = rjob, log = m => { $('#rlog').textContent += m + '\n'; }, patch = (id, name) => g(`https://www.googleapis.com/drive/v3/files/${id}?supportsAllDrives=true`, {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name})});
+  $('#ra').disabled = true; $('#rlog').textContent = '';
+  try {
+    for (const x of files) if (x.nw && x.nw !== x.f.name) { await patch(x.f.id, x.nw); log('✓ ' + x.nw); }
+    await patch(b.id, nn); log(`✓ Cartella rinominata in «${nn}»`);
+    b.name = nn; brani.sort((p, q) => p.name.localeCompare(q.name, 'it')); fillR();
+    res = res.filter(r => r.b.id !== b.id); render();
+    $('#rb').value = labR(b); $('#rn').value = ''; $('#rv').innerHTML = ''; $('#ra').hidden = true; rjob = null;
+  } catch (e) { log('Errore: ' + e.message + ' Rifai l’anteprima e applica di nuovo: i file già rinominati vengono saltati.'); }
+  $('#ra').disabled = false;
 };
 </script>
 </body>
