@@ -98,16 +98,16 @@ function expired() {
 }
 $('#login').onclick = () => {
   if (!window.google) { $('#st').textContent = 'Servizio Google non raggiungibile'; return; }
-  let hint; try { hint = localStorage.getItem('hint') || undefined; } catch (e) {}
+  try { localStorage.removeItem('hint'); } catch (e) {}
   google.accounts.oauth2.initTokenClient({
-    client_id: CFG.CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive openid profile', hd: 'corpomusicalegverdi.it', login_hint: hint,
+    client_id: CFG.CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive openid profile', hd: 'corpomusicalegverdi.it',
     callback: async r => {
       if (!r.access_token) return;
       tok = r.access_token; let name = '';
       try {
         const u = await g('https://www.googleapis.com/oauth2/v3/userinfo');
         name = u.given_name || u.name || '';
-        try { localStorage.setItem('hint', u.email); } catch (e) {}
+        
       } catch (e) {}
       SS.set('sess', JSON.stringify({t: tok, n: name, e: Date.now() + ((Number(r.expires_in) || 3600) - 120) * 1000}));
       connected(name);
