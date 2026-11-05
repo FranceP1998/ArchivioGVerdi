@@ -41,6 +41,8 @@ ol li{display:grid;grid-template-columns:1fr 1.5rem 1fr;gap:.5rem;padding:.15rem
 .u{margin:.5rem 0 .5rem 1rem}
 .warn{color:var(--wine);font-weight:600}
 pre{white-space:pre-wrap;margin:.75rem 0 0}
+.u input{padding:.4rem .5rem;border:1px solid var(--navy);border-radius:6px;max-width:100%}
+.u button{padding:.25rem .8rem}
 </style>
 </head>
 <body>
@@ -124,12 +126,22 @@ const DEF = ['Ottavino', ...N('Flauto', 2), 'Flauto 1 e 2', 'Flauto', ...D('Oboe
   ...N('Flicorno', 3), 'Flicorno', ...N('Cornetta', 3), 'Cornetta', ...N('Tromba', 4), 'Tromba',
   ...T('Corno', ['1','2','3','4',''], ['F','Eb','Bb']), 'Eufonio in C BC', 'Eufonio in Bb TC', 'Eufonio in C TC', 'Eufonio in Bb BC',
   ...T('Trombone', ['1','2','3','Basso',''], TON), ...T('Tuba', ['1','2','1 e 2',''], TON), 'Contrabbasso', 'Pianoforte', 'Percussioni'];
-let parent;
+let parent, orderId;
 async function loadOrder() {
   parent = (await g(`https://www.googleapis.com/drive/v3/files/${CFG.FOLDERS.concerto}?fields=parents&supportsAllDrives=true`)).parents[0];
   const q = `'${parent}' in parents and name='ordine-strumenti.json' and trashed=false`;
   const r = await g(`${API}&fields=files(id)&q=${encodeURIComponent(q)}`);
-  return r.files.length ? g(`https://www.googleapis.com/drive/v3/files/${r.files[0].id}?alt=media&supportsAllDrives=true`) : null;
+  if (!r.files.length) return null;
+  orderId = r.files[0].id;
+  return g(`https://www.googleapis.com/drive/v3/files/${orderId}?alt=media&supportsAllDrives=true`);
+}
+async function saveOrder(nl) {
+  const body = JSON.stringify(nl);
+  if (orderId) return g(`https://www.googleapis.com/upload/drive/v3/files/${orderId}?uploadType=media&supportsAllDrives=true`, {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body});
+  const f = new FormData();
+  f.append('metadata', new Blob([JSON.stringify({name: 'ordine-strumenti.json', parents: [parent]})], {type: 'application/json'}));
+  f.append('file', new Blob([body], {type: 'application/json'}));
+  orderId = (await g('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id', {method: 'POST', body: f})).id;
 }
 async function start() {
   $('#pg').textContent = 'Carico ordine e brani…';
@@ -197,8 +209,8 @@ function replan(r) {
   });
   r.plan = {rows, unknown, orderChanged: rows.map(x => x.item.f.id).join() !== oldIds};
   r.ok = !unknown.length && !rows.some(x => x.changed);
-  if (!r.aSet) r.apply = !unknown.length;
-  if (!r.gSet) r.regen = r.plan.orderChanged;
+  if (r.apply === undefined) r.apply = false;
+  if (r.regen === undefined) r.regen = false;
 }
 $('#an').onclick = async () => {
   $('#an').disabled = true; res = []; alias = {}; $('#log').textContent = '';
@@ -220,7 +232,7 @@ function render() {
   $('#list').innerHTML = todo.map(r => {
     const i = res.indexOf(r), ch = r.plan.rows.filter(x => x.changed);
     return `<details data-i="${i}" ${r.open ? 'open' : ''}><summary><b>${esc(r.b.name)}</b><small>${LBL[r.b.k]} · ${ch.length} da rinominare${r.plan.unknown.length ? ' · ' + r.plan.unknown.length + ' da assegnare' : ''}</small></summary>
-      ${r.plan.unknown.map(u => { const gs = guess(u.raw); return `<p class="u warn">«${esc(u.raw)}» non riconosciuto → <select class="sl" data-k="${esc(key(u.raw))}"><option value="">Scegli lo strumento</option>${gs ? `<option value="${esc(gs)}">Suggerito: ${esc(gs)}</option>` : ''}${L.map(x => `<option>${esc(x)}</option>`).join('')}</select></p>`; }).join('')}
+      ${r.plan.unknown.map(u => { const gs = guess(u.raw), k = esc(key(u.raw)); return `<p class="u"><span class="warn">«${esc(u.raw)}» non riconosciuto</span><br>Assegna a: <select class="sl" data-k="${k}"><option value="">Scegli lo strumento</option>${gs ? `<option value="${esc(gs)}">Suggerito: ${esc(gs)}</option>` : ''}${L.map(x => `<option>${esc(x)}</option>`).join('')}</select><br>Oppure aggiungi un nuovo strumento: <input class="nn" value="${esc(u.raw)}" aria-label="Nome del nuovo strumento"> dopo <select class="np" aria-label="Posizione nell’ordine">${L.map(x => `<option${x === 'Pianoforte' ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select> <button type="button" class="add" data-k="${k}">Aggiungi e assegna</button></p>`; }).join('')}
       <ol>${ch.map(x => `<li><span>${esc(x.was)}</span><span>→</span><span>${esc(x.nw)}</span></li>`).join('')}</ol>
       <label class="inc"><input type="checkbox" class="cb" data-w="ap" data-i="${i}" ${r.apply ? 'checked' : ''} ${r.plan.unknown.length ? 'disabled' : ''}> Applica a questo brano</label>
       <label class="inc"><input type="checkbox" class="cb" data-w="rg" data-i="${i}" ${r.regen ? 'checked' : ''}> Rigenera il file «Parti» con il nuovo ordine</label></details>`;
@@ -231,6 +243,20 @@ $('#list').addEventListener('change', e => {
   const t = e.target;
   if (t.classList.contains('sl')) { if (t.value) { alias[t.dataset.k] = t.value; res.forEach(replan); render(); } }
   else if (t.classList.contains('cb')) { const r = res[+t.dataset.i]; if (t.dataset.w === 'ap') { r.apply = t.checked; r.aSet = true; } else { r.regen = t.checked; r.gSet = true; } render(); }
+});
+$('#list').addEventListener('click', async e => {
+  const t = e.target; if (!t.classList.contains('add')) return;
+  const p = t.closest('p'), nm = p.querySelector('.nn').value.trim(), after = p.querySelector('.np').value;
+  if (!nm) return;
+  const ex = L.find(x => key(x) === key(nm));
+  if (ex) alias[t.dataset.k] = ex;
+  else {
+    if (!confirm(`Aggiungo «${nm}» all’ordine classico, dopo «${after}», per tutta la banda?`)) return;
+    const nl = [...L]; nl.splice(L.indexOf(after) + 1, 0, nm);
+    try { await saveOrder(nl); } catch (err) { $('#log').textContent += 'Non sono riuscito a salvare l’ordine: ' + err.message + '\n'; return; }
+    L = nl; alias[t.dataset.k] = nm; $('#log').textContent += `Aggiunto «${nm}» all’ordine classico (salvato per tutta la banda).\n`;
+  }
+  res.forEach(replan); render();
 });
 $('#list').addEventListener('toggle', e => { const d = e.target; if (d.dataset && d.dataset.i) res[+d.dataset.i].open = d.open; }, true);
 
@@ -257,7 +283,7 @@ $('#ap').onclick = async () => {
       for (const x of r.plan.rows) if (x.changed)
         await g(`https://www.googleapis.com/drive/v3/files/${x.item.f.id}?supportsAllDrives=true`, {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name: x.nw + '.pdf'})});
       if (r.regen) { log(`${r.b.name}: rigenero «Parti»…`); await regen(r); }
-      const fresh = await scan(r.b); r.items = fresh.items; r.aSet = r.gSet = false; replan(r);
+      const fresh = await scan(r.b); r.items = fresh.items; r.apply = false; r.regen = false; replan(r);
       log(`✓ ${r.b.name}`);
     }
     log('Fatto. I brani sistemati risultano ora a posto.');
