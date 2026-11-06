@@ -23,6 +23,7 @@
     ['sax alto', 'sax contralto'], ['alto sax', 'sax contralto'], ['tenor sax', 'sax tenore'], ['ten sax', 'sax tenore'],
     ['sax bar', 'sax baritono'], ['sax baritone', 'sax baritono'], ['bar sax', 'sax baritono'],
     ['euphonium', 'eufonio'], ['trumpet', 'tromba'], ['horn', 'corno'], ['basses', 'tuba'], ['bass', 'tuba'],
+    ['baritone', 'eufonio'],
     ['stringbass', 'contrabbasso'], ['string bass', 'contrabbasso'], ['srtingbass', 'contrabbasso'],
     ['percussion', 'percussioni'], ['percussions', 'percussioni'], ['perc', 'percussioni'],
     ['flugelhorn', 'flicorno'], ['flughelhorn', 'flicorno'], ['fluegelhorn', 'flicorno'],
@@ -122,7 +123,7 @@
     }
     const k = +q.roles[0];
     if (isNaN(k)) return one(first(R(q.roles[0]), U, L[0]));
-    if ((b === 'tromba' || b === 'cornetta') && k === 3 && single('3') && single('4')) return sp(single('3'), single('4'));
+    if ((b === 'tromba' || b === 'cornetta' || b === 'clarinetto') && k === 3 && single('3') && single('4')) return sp(single('3'), single('4'));
     const rules = {
       corno: [[R('1'), U], [R('2'), U, R('1')], [R('3'), R('1'), U], [R('4'), R('3'), R('2'), U, R('1')]],
       trombone: [[R('1'), U], [R('2'), U, R('1')], [R('3'), R('basso'), R('2'), U, R('1')]]
@@ -154,5 +155,5 @@
     return a ? parts.find(p => low(p.name) === a.part) : null;
   }
 
-  (typeof window !== 'undefined' ? window : globalThis).Regole = {ORG0, KW0, SYN0, applySyn, setSynonyms, getSynonyms: () => SYN, parseOrg, parsePart, calc, partFor, percKey, ordKey, setKeywords, getKeywords: () => KW, norm};
+  (typeof window !== 'undefined' ? window : globalThis).Regole = {build: 'F2', ORG0, KW0, SYN0, applySyn, setSynonyms, getSynonyms: () => SYN, parseOrg, parsePart, calc, partFor, percKey, ordKey, setKeywords, getKeywords: () => KW, norm};
 })();
