@@ -91,7 +91,7 @@ pre{white-space:pre-wrap;margin:.75rem 0 0}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="regole.js"></script>
+<script src="regole.js?v=3"></script>
 <script>
 const CFG = {
   CLIENT_ID: '461215269916-tcd8cfsa5m951ohohibf4f8635tdgolp.apps.googleusercontent.com',
@@ -187,7 +187,7 @@ const ROM = {i: '1', ii: '2', iii: '3', iv: '4'};
 const key = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(' ').map(w => ROM[w] || w).join(' ');
 const ord = n => {
   let i = L.indexOf(n); if (i >= 0) return i;
-  if (/^percussioni/i.test(n)) return Regole.percKey(n, L);
+  if (/^percussioni/i.test(n)) return (Regole.percKey ? Regole.percKey(n, L) : L.indexOf('Percussioni'));
   if (n.endsWith(' Solo')) { const b = n.slice(0, -5); i = L.indexOf(b + ' 1'); if (i < 0) i = L.indexOf(b); if (i >= 0) return i - .5; }
   return 9999;
 };

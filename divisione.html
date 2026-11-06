@@ -125,7 +125,7 @@ textarea{height:16rem;font-family:'Space Mono',monospace;font-size:.85rem;margin
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="regole.js"></script>
+<script src="regole.js?v=3"></script>
 <script>
 // ---- Da compilare una sola volta ----
 const CFG = {
@@ -202,7 +202,7 @@ $('#reset').onclick = () => { if (confirm('Ripristinare l’ordine predefinito p
 function key(n, L) {
   let i = L.indexOf(n);
   if (i >= 0) return i;
-  if (/^percussioni/i.test(n)) return Regole.percKey(n, L);
+  if (/^percussioni/i.test(n)) return (Regole.percKey ? Regole.percKey(n, L) : L.indexOf('Percussioni'));
   if (n.endsWith(' Solo')) { const b = n.slice(0, -5); i = L.indexOf(b + ' 1'); if (i < 0) i = L.indexOf(b); if (i >= 0) return i - .5; }
   return 9999;
 }
