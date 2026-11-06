@@ -16,6 +16,29 @@
     eufonio: ['c bc', 'bb tc']
   };
 
+  // ---- Sinonimi: "Flute" -> "flauto", "Sib" -> "bb", ... (parole intere, vince la frase più lunga) ----
+  const SYN0 = [
+    ['flute', 'flauto'], ['piccolo', 'ottavino'], ['clarinet', 'clarinetto'], ['cl', 'clarinetto'],
+    ['bass clarinet', 'clarinetto basso'], ['bass cl', 'clarinetto basso'],
+    ['sax alto', 'sax contralto'], ['alto sax', 'sax contralto'], ['tenor sax', 'sax tenore'], ['ten sax', 'sax tenore'],
+    ['sax bar', 'sax baritono'], ['sax baritone', 'sax baritono'], ['bar sax', 'sax baritono'],
+    ['euphonium', 'eufonio'], ['trumpet', 'tromba'], ['horn', 'corno'], ['basses', 'tuba'], ['bass', 'tuba'],
+    ['bass trombone', 'trombone basso'], ['baritone sax', 'sax baritono'], ['french horn', 'corno'], ['english horn', 'corno inglese'], ['bassoon', 'fagotto'],
+    ['fa', 'f'], ['mib', 'eb'], ['sib', 'bb']
+  ];
+  let SYN = SYN0;
+  const setSynonyms = l => { SYN = Array.isArray(l) && l.length ? l : SYN0; };
+  function applySyn(text) {
+    const tok = norm(text).split(' ').filter(Boolean), out = [];
+    const rules = SYN.filter(r => r && r[0] && r[1] != null).map(([a, b]) => [norm(a).split(' '), norm(b).split(' ').filter(Boolean)])
+      .filter(([a]) => a[0]).sort((x, y) => y[0].length - x[0].length);
+    for (let i = 0; i < tok.length;) {
+      const r = rules.find(([a]) => a.every((w, j) => tok[i + j] === w));
+      if (r) { out.push(...r[1]); i += r[0].length; } else out.push(tok[i++]);
+    }
+    return out.join(' ');
+  }
+
   // ---- Percussioni: la posizione di una parte dipende dal gruppo, deciso da parole chiave ----
   const norm = x => String(x).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
   const KW0 = {
@@ -124,5 +147,5 @@
     return a ? parts.find(p => low(p.name) === a.part) : null;
   }
 
-  (typeof window !== 'undefined' ? window : globalThis).Regole = {ORG0, KW0, parseOrg, parsePart, calc, partFor, percKey, ordKey, setKeywords, getKeywords: () => KW, norm};
+  (typeof window !== 'undefined' ? window : globalThis).Regole = {ORG0, KW0, SYN0, applySyn, setSynonyms, getSynonyms: () => SYN, parseOrg, parsePart, calc, partFor, percKey, ordKey, setKeywords, getKeywords: () => KW, norm};
 })();

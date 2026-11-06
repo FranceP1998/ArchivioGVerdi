@@ -91,7 +91,7 @@ pre{white-space:pre-wrap;margin:.75rem 0 0}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="regole.js?v=3"></script>
+<script src="regole.js?v=4"></script>
 <script>
 const CFG = {
   CLIENT_ID: '461215269916-tcd8cfsa5m951ohohibf4f8635tdgolp.apps.googleusercontent.com',
@@ -191,18 +191,33 @@ const ord = n => {
   if (n.endsWith(' Solo')) { const b = n.slice(0, -5); i = L.indexOf(b + ' 1'); if (i < 0) i = L.indexOf(b); if (i >= 0) return i - .5; }
   return 9999;
 };
+const syn = x => (Regole.applySyn ? Regole.applySyn(x) : key(x));
+// Porta la tonalità nella forma dell'ordine ("corno 1 in f"): "bb clarinetto 1", "clarinetto bb 1" e "tromba in bb 1" diventano "... 1 in bb"
+const TN = '(c|bb|eb|f)(?: (bc|tc))?', inTon = (a, b) => ` in ${a}${b ? ' ' + b : ''}`;
+const tidy = x => {
+  let m;
+  if ((m = x.match(new RegExp(`^(.*?) in ${TN} (\\d+)$`)))) return `${m[1]} ${m[4]}${inTon(m[2], m[3])}`;
+  if ((m = x.match(new RegExp(`^${TN} (.+)$`)))) return `${m[3]}${inTon(m[1], m[2])}`;
+  if ((m = x.match(new RegExp(`^(.*?) ${TN}(?: (\\d+))?$`))) && !/ in$/.test(m[1])) return `${m[1]}${m[4] ? ' ' + m[4] : ''}${inTon(m[2], m[3])}`;
+  return x;
+};
+const noTon = x => x.replace(/ in (?:c|bb|eb|f)(?: (?:bc|tc))?$/, '');
 function canon(rawName) {
-  const k = key(rawName);
-  if (alias[k]) return alias[k];
+  const k0 = key(rawName);
+  if (alias[k0]) return alias[k0];
+  const k = tidy(syn(rawName));
   if (/^percussioni/.test(k)) { const r = rawName.replace(/^percussioni\s*[-–:]?\s*/i, '').trim(); return !r ? 'Percussioni' : /^\d+$/.test(r) ? 'Percussioni ' + r : 'Percussioni - ' + r; }
-  const solo = / solo$/.test(k), base = solo ? k.replace(/ solo$/, '') : k, hit = L.find(x => key(x) === base);
+  const solo = / solo$/.test(k), base = solo ? k.replace(/ solo$/, '') : k;
+  // se la tonalità non è nell'ordine (es. "Tromba 1 in Bb") si ignora; se manca del tutto, si assume quella della banda (C BC per eufonio, tromboni e tube; F per i corni)
+  const dt = /^(eufonio|trombone|tuba)( |$)/.test(base) ? ' in c bc' : /^corno( |$)/.test(base) ? ' in f' : null;
+  const hit = L.find(x => key(x) === base) || L.find(x => key(x) === noTon(base)) || (dt && !/ in /.test(base) ? L.find(x => key(x) === base + dt) : null);
   return hit ? (solo ? hit + ' Solo' : hit) : null;
 }
 function guess(rawName) {
-  const t = new Set(key(rawName).split(' ')); let best = null, bs = 0;
+  const t = new Set(tidy(syn(rawName)).split(' ')); let best = null, bs = 0;
   for (const x of L) {
     const u = new Set(key(x).split(' ')); let i = 0; t.forEach(w => { if (u.has(w)) i++; });
-    const s = i / (t.size + u.size - i); if (s > bs) { bs = s; best = x; }
+    const sc = i / (t.size + u.size - i); if (sc > bs) { bs = sc; best = x; }
   }
   return bs >= .5 ? best : null;
 }
@@ -376,6 +391,7 @@ document.querySelector('main').addEventListener('click', async e => {
   catch (err) { alert('Errore: ' + err.message); }
   t.disabled = false;
 });
+
 </script>
 </body>
 </html>
