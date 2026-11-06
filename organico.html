@@ -63,7 +63,7 @@ details button{margin:.25rem .25rem .25rem 0}
 <body>
 <header>
   <a href="https://www.corpomusicalegverdi.it/"><img class="logo" src="https://www.corpomusicalegverdi.it/wp-content/uploads/2026/01/Marchio-Ufficiale-Orizzontale.svg" alt="Corpo Musicale “G. Verdi” di Venaria Reale"></a>
-  <nav class="nav"><a href="archivio.html">Archivio</a><a href="stampa.html">Stampa</a><a href="cartellina.html">Cartellina</a><a href="organico.html" aria-current="page">Organico</a><a href="divisione.html">Divisione PDF</a></nav>
+  <nav class="nav"><a href="archivio.html">Archivio</a><a href="divisione.html">Aggiungi brano</a><a href="stampa.html">Stampa brano</a><a href="cartellina.html">Crea per strumento</a><a href="organico.html" aria-current="page">Organico</a><a href="ordine.html">Ordine parti</a><a href="sistema.html">Controllo</a></nav>
   <div class="acc"><span id="st">Non connesso</span><button id="login">Accedi con Google</button></div>
 </header>
 <div class="band"><h1>Organico</h1><p>Quanti musici per ogni strumento, nell’ordine in cui compaiono</p></div>
@@ -81,14 +81,6 @@ details button{margin:.25rem .25rem .25rem 0}
   <datalist id="sg"></datalist>
   <div class="savebar"><button id="save" class="main" disabled>Salva organico per tutta la banda</button><span id="smsg" class="mono">Accedi con Google per iniziare.</span></div>
 
-  <details>
-    <summary>Copie di sicurezza (GitHub)</summary>
-    <p class="hint">I dati vivi stanno nel Drive. Per averne anche una copia su GitHub, scarica i file e caricali nella cartella <b>dati</b> del sito: se un file sparisce dal Drive, il sito legge quella copia.</p>
-    <button type="button" data-f="organico.json">Scarica organico.json</button>
-    <button type="button" data-f="ordine-strumenti.json">Scarica ordine-strumenti.json</button>
-    <button type="button" data-f="cartellina.json">Scarica cartellina.json</button>
-    <button type="button" data-f="libretto.json">Scarica libretto.json</button>
-  </details>
 </main>
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -201,7 +193,6 @@ const change = () => { setDirty(true); render(); };
 document.querySelector('main').addEventListener('click', e => {
   const t = e.target.closest('button'); if (!t) return;
   if (t.dataset.add) return addRole(t.dataset.add);
-  if (t.dataset.f) return dlFile(t.dataset.f);
   const li = t.closest('li.r'); if (!li || !t.dataset.a) return;
   const a = org[li.dataset.k], i = +li.dataset.i, x = a[i];
   if (t.dataset.a === 'inc') x.n++;
@@ -243,14 +234,6 @@ $('#save').onclick = async () => {
     await saveCfg('organico.json', o); saved = o; setDirty(false); msg('Organico salvato per tutta la banda.');
   } catch (e) { msg('Non sono riuscito a salvare: ' + e.message, true); $('#save').disabled = false; }
 };
-async function dlFile(name) {
-  try {
-    const obj = name === 'organico.json' ? saved : await loadCfg(name);
-    if (obj == null) { msg(name + ' non esiste ancora.', true); return; }
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([JSON.stringify(obj, null, 2)], {type: 'application/json'})); a.download = name; a.click();
-  } catch (e) { msg('Errore: ' + e.message, true); }
-}
 render();
 </script>
 </body>

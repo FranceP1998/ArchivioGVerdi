@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ordine parti · Archivio spartiti</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Karla:wght@400;600&family=Piazzolla:wght@500;700&family=Space+Mono&display=swap">
+<style>
+:root{--navy:#1E1937;--orange:#EF7135;--green:#008367;--wine:#620E1C;--cream:#F6E1C9;--gold:#F0BC0F;--sage:#7EA681;--sky:#BBDEF5;--ink:#1C1C1F}
+*{box-sizing:border-box}
+body{margin:0;background:var(--cream);color:var(--ink);font:16px/1.55 Karla,sans-serif}
+h1,h2{font-family:Piazzolla,serif;margin:0;font-weight:700;color:var(--navy)}
+h1{font-size:clamp(2rem,5vw,3rem);color:var(--cream);line-height:1.1}
+h2{font-size:1.5rem}
+header{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;padding:.9rem clamp(1rem,4vw,3rem);background:#fff;border-bottom:4px solid var(--orange)}
+.logo{display:block;height:48px;width:auto;max-width:100%}
+.acc{display:flex;align-items:center;gap:.75rem}
+.nav{display:flex;gap:1.25rem;flex-wrap:wrap}
+.nav a{color:var(--navy);font-weight:600;text-decoration:none;padding:.25rem 0;border-bottom:3px solid transparent}
+.nav a[aria-current]{border-bottom-color:var(--orange)}
+.nav a:hover{border-bottom-color:var(--sage)}
+#st{padding:.2rem .7rem;border-radius:999px;background:var(--sky);color:var(--navy);font-family:'Space Mono',monospace;font-size:.85rem}
+#st.on{background:var(--green);color:#fff}
+.band{background:var(--navy);padding:2rem clamp(1rem,4vw,3rem) 2.25rem}
+.band p{margin:.4rem 0 0;color:var(--cream);font-size:1.1rem}
+main{padding:1.5rem clamp(1rem,4vw,3rem) 3rem}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;align-items:start}
+@media(max-width:900px){.cols{grid-template-columns:1fr}}
+section{background:#fff;border-radius:12px;padding:1.25rem;border-top:6px solid var(--navy)}
+section.sf{border-top-color:var(--orange)}
+.head{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;margin-bottom:.75rem}
+.tot{font-family:'Space Mono',monospace;font-size:.85rem}
+input,button{font:inherit;color:inherit}
+input[type=text]{padding:.5rem .6rem;border:1px solid var(--navy);border-radius:6px;background:#fff;color:var(--ink);max-width:100%}
+input:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+button{cursor:pointer;border:2px solid var(--navy);background:#fff;color:var(--navy);padding:.5rem 1rem;border-radius:999px;font-weight:600}
+button:hover:not(:disabled){background:var(--sky)}
+button.main{background:var(--orange);border-color:var(--orange)}
+button.main:hover:not(:disabled){background:var(--gold);border-color:var(--gold)}
+button:disabled{background:var(--cream);border-color:var(--cream);cursor:not-allowed}
+[hidden]{display:none!important}
+ol{list-style:none;margin:0;padding:0}
+li.r{display:flex;align-items:center;gap:.6rem;padding:.4rem .5rem;margin:.25rem 0;border:1px solid var(--sage);border-radius:10px;background:#fff}
+li.r.dragging{opacity:.4}
+li.r.over{background:var(--sky)}
+.grip{cursor:grab;color:var(--sage);font-size:1.2rem;line-height:1;user-select:none}
+.nm{flex:1;font-weight:600;color:var(--navy)}
+.st{display:flex;align-items:center;gap:.25rem}
+.st button{padding:0;width:2rem;height:2rem;border-width:1px;font-size:1.1rem;line-height:1}
+.st input{width:3.2rem;text-align:center;font-family:'Space Mono',monospace;padding:.3rem;border:1px solid var(--navy);border-radius:6px}
+.act button{padding:.15rem .55rem;border-width:1px;margin-left:.2rem}
+.add{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.9rem}
+.add input{flex:1;min-width:10rem}
+.hint{font-size:.9rem;margin:.25rem 0 1rem}
+.warn{color:var(--wine);font-weight:600}
+.savebar{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin:1.25rem 0}
+details{background:#fff;border-radius:12px;padding:.9rem 1.25rem}
+summary{cursor:pointer;font-weight:600;color:var(--navy)}
+details button{margin:.25rem .25rem .25rem 0}
+.mono{font-family:'Space Mono',monospace;font-size:.85rem}
+.fbar{margin-bottom:.75rem}
+.fbar input{width:100%;max-width:24rem}
+select{padding:.5rem .6rem;border:1px solid var(--navy);border-radius:6px;background:#fff;color:var(--ink);font:inherit;max-width:100%}
+select:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+.num{font-family:'Space Mono',monospace;font-size:.8rem;color:var(--sage);width:2rem;text-align:right}
+.wide{max-width:46rem}
+</style>
+</head>
+<body>
+<header>
+  <a href="https://www.corpomusicalegverdi.it/"><img class="logo" src="https://www.corpomusicalegverdi.it/wp-content/uploads/2026/01/Marchio-Ufficiale-Orizzontale.svg" alt="Corpo Musicale “G. Verdi” di Venaria Reale"></a>
+  <nav class="nav"><a href="archivio.html">Archivio</a><a href="divisione.html">Aggiungi brano</a><a href="stampa.html">Stampa brano</a><a href="cartellina.html">Crea per strumento</a><a href="organico.html">Organico</a><a href="ordine.html" aria-current="page">Ordine parti</a><a href="sistema.html">Controllo</a></nav>
+  <div class="acc"><span id="st">Non connesso</span><button id="login">Accedi con Google</button></div>
+</header>
+<div class="band"><h1>Ordine parti</h1><p>L’ordine classico degli strumenti nei brani</p></div>
+
+<main class="wide">
+  <p class="hint">L’ordine decide la numerazione delle parti nei brani nuovi (01, 02, …). Riordina con le frecce o trascinando la riga e premi «Salva» per renderlo valido per tutta la banda. I brani già divisi non cambiano finché non li sistemi dalla scheda Controllo.</p>
+  <section>
+    <div class="head"><h2>Ordine classico</h2><span class="tot" id="tot"></span></div>
+    <div class="fbar"><input type="text" id="flt" placeholder="Cerca uno strumento" aria-label="Cerca uno strumento"></div>
+    <ol id="ol"></ol>
+    <div class="add"><input type="text" id="nn" placeholder="Nuovo strumento, per esempio Clarinetto in Ab" aria-label="Nuovo strumento"><select id="np" aria-label="Posizione"></select><button type="button" id="addb">Aggiungi</button></div>
+  </section>
+  <div class="savebar"><button id="save" class="main" disabled>Salva ordine per tutta la banda</button><span id="smsg" class="mono">Accedi con Google per iniziare.</span></div>
+</main>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="regole.js"></script>
+<script>
+const CFG = {
+  CLIENT_ID: '461215269916-tcd8cfsa5m951ohohibf4f8635tdgolp.apps.googleusercontent.com',
+  FOLDERS: {concerto: '1wWMSp-kyX2K6Kk1hJfuv3gISgkoQBX4V', marce: '1M0-uSG4jsO-P6SG-MY1MoNd_aAppM8Dp'}
+};
+const $ = s => document.querySelector(s), low = s => s.toLowerCase().trim();
+const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const cap = s => s.replace(/\b\w/g, c => c.toUpperCase()).replace(/ In /g, ' in ');
+const API = 'https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives';
+const KS = ['concerto', 'marce'], toText = a => a.map(x => `${x.n} ${x.role}`).join('\n');
+let tok, org = {concerto: [], marce: []}, saved = null, isDirty = false, loaded = false;
+const msg = (t, warn) => { $('#smsg').textContent = t; $('#smsg').className = 'mono' + (warn ? ' warn' : ''); };
+
+// ---- Accesso (la sessione è condivisa con le altre pagine) ----
+const SS = {
+  get: k => { try { return sessionStorage.getItem(k); } catch (e) { return null; } },
+  set: (k, v) => { try { sessionStorage.setItem(k, v); } catch (e) {} },
+  del: k => { try { sessionStorage.removeItem(k); } catch (e) {} }
+};
+function connected(name) { $('#st').textContent = name ? 'Ciao ' + name : 'Connesso'; $('#st').className = 'on'; $('#login').hidden = true; start(); }
+function expired() { tok = null; SS.del('sess'); $('#st').textContent = 'Sessione scaduta'; $('#st').className = ''; $('#login').hidden = false; }
+$('#login').onclick = () => {
+  if (!window.google) { $('#st').textContent = 'Servizio Google non raggiungibile'; return; }
+  google.accounts.oauth2.initTokenClient({
+    client_id: CFG.CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive openid profile', hd: 'corpomusicalegverdi.it',
+    callback: async r => {
+      if (!r.access_token) return;
+      tok = r.access_token; let name = '';
+      try { const u = await g('https://www.googleapis.com/oauth2/v3/userinfo'); name = u.given_name || u.name || ''; } catch (e) {}
+      SS.set('sess', JSON.stringify({t: tok, n: name, e: Date.now() + ((Number(r.expires_in) || 3600) - 120) * 1000}));
+      connected(name);
+    }
+  }).requestAccessToken();
+};
+async function raw(url, opt = {}) {
+  const r = await fetch(url, {...opt, headers: {...(opt.headers || {}), Authorization: 'Bearer ' + tok}});
+  if (r.status === 401) { expired(); throw new Error('Sessione scaduta: accedi di nuovo con Google.'); }
+  if (!r.ok) throw new Error(await r.text());
+  return r;
+}
+const g = async (u, o) => (await raw(u, o)).json();
+try { const s0 = JSON.parse(SS.get('sess')); if (s0 && s0.e > Date.now()) { tok = s0.t; window.addEventListener('load', () => connected(s0.n)); } } catch (e) {}
+
+// ---- File di configurazione sul Drive (con copia di sicurezza su GitHub in dati/) ----
+const CF = {}; let parent;
+async function parentId() {
+  if (!parent) parent = (await g(`https://www.googleapis.com/drive/v3/files/${CFG.FOLDERS.concerto}?fields=parents&supportsAllDrives=true`)).parents[0];
+  return parent;
+}
+async function backup(name) { try { const x = await fetch('dati/' + name); if (x.ok) return await x.json(); } catch (e) {} return null; }
+async function loadCfg(name) {
+  const q = `'${await parentId()}' in parents and name='${name}' and trashed=false`;
+  const r = await g(`${API}&fields=files(id)&q=${encodeURIComponent(q)}`);
+  if (!r.files.length) return backup(name);
+  CF[name] = r.files[0].id;
+  return g(`https://www.googleapis.com/drive/v3/files/${CF[name]}?alt=media&supportsAllDrives=true`);
+}
+async function saveCfg(name, obj) {
+  const body = JSON.stringify(obj);
+  if (CF[name]) return g(`https://www.googleapis.com/upload/drive/v3/files/${CF[name]}?uploadType=media&supportsAllDrives=true`, {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body});
+  const f = new FormData();
+  f.append('metadata', new Blob([JSON.stringify({name, parents: [await parentId()]})], {type: 'application/json'}));
+  f.append('file', new Blob([body], {type: 'application/json'}));
+  CF[name] = (await g('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id', {method: 'POST', body: f})).id;
+}
+
+// ---- Elenco predefinito (usato solo se sul Drive non c'è ancora un ordine) ----
+const N = (b, k) => Array.from({length: k}, (_, i) => b + ' ' + (i + 1));
+const T = (b, ps, ts) => ts.flatMap(t => ps.map(p => (p ? b + ' ' + p : b) + ' in ' + t));
+const TON = ['C BC', 'C TC', 'Bb BC', 'Bb TC', 'Eb BC', 'Eb TC'], D = b => [...N(b, 2), b + ' 1 e 2', b];
+const DEF = ['Ottavino', 'Ottavino e Flauto', 'Ottavino e Flauto 1', ...N('Flauto', 2), 'Flauto 1 e 2', 'Flauto', ...D('Oboe'), ...D('Corno Inglese'), ...D('Fagotto'), 'Clarinetto in Eb', ...N('Clarinetto', 3), 'Clarinetto', 'Clarinetto basso',
+  'Sax Soprano', ...N('Sax Contralto', 2), 'Sax Contralto', ...N('Sax Tenore', 2), 'Sax Tenore', 'Sax Baritono',
+  ...N('Flicorno', 3), 'Flicorno', ...N('Cornetta', 3), 'Cornetta', ...N('Tromba', 4), 'Tromba',
+  ...T('Corno', ['1','2','3','4',''], ['F','Eb','Bb']), 'Eufonio in C BC', 'Eufonio in Bb TC', 'Eufonio in C TC', 'Eufonio in Bb BC',
+  ...T('Trombone', ['1','2','3','Basso',''], TON), ...T('Tuba', ['1','2','1 e 2',''], TON), 'Contrabbasso', 'Pianoforte', 'Percussioni'];
+
+let L = [];
+function setDirty(v) { isDirty = v; $('#save').disabled = !(tok && loaded && v); if (v) msg('Modifiche non ancora salvate.'); }
+window.addEventListener('beforeunload', e => { if (isDirty) { e.preventDefault(); e.returnValue = ''; } });
+
+async function start() {
+  msg('Carico l’ordine…');
+  try {
+    const x = await loadCfg('ordine-strumenti.json');
+    L = Array.isArray(x) ? x.slice() : DEF.slice(); loaded = true; setDirty(false); render();
+    msg(Array.isArray(x) ? 'Ordine caricato.' : 'Nessun ordine salvato: è quello predefinito.');
+  } catch (e) { msg('Errore: ' + e.message, true); }
+}
+
+// ---- Disegno dell'elenco ----
+function render() {
+  const f = low($('#flt').value);
+  $('#ol').innerHTML = L.map((n, i) => `<li class="r" draggable="true" data-i="${i}" ${f && !low(n).includes(f) ? 'hidden' : ''}>
+    <span class="num">${i + 1}</span><span class="grip" aria-hidden="true" title="Trascina">⠿</span><span class="nm">${esc(n)}</span>
+    <span class="act"><button type="button" data-a="up" aria-label="Sposta su">↑</button><button type="button" data-a="dn" aria-label="Sposta giù">↓</button><button type="button" data-a="rm" aria-label="Togli dall’ordine">✕</button></span></li>`).join('');
+  $('#tot').textContent = L.length + ' strumenti';
+  const cur = $('#np').value;
+  $('#np').innerHTML = '<option value="-1">in fondo</option>' + L.map((n, i) => `<option value="${i}">dopo ${esc(n)}</option>`).join('');
+  if (cur && $('#np').querySelector(`option[value="${cur}"]`)) $('#np').value = cur;
+}
+const change = () => { setDirty(true); render(); };
+$('#flt').oninput = render;
+$('#ol').addEventListener('click', e => {
+  const t = e.target.closest('button'); if (!t) return;
+  const i = +t.closest('li.r').dataset.i, a = t.dataset.a;
+  if (a === 'up' && i > 0) [L[i - 1], L[i]] = [L[i], L[i - 1]];
+  else if (a === 'dn' && i < L.length - 1) [L[i + 1], L[i]] = [L[i], L[i + 1]];
+  else if (a === 'rm') { if (!confirm(`Tolgo «${L[i]}» dall’ordine? I file con questo nome risulteranno «fuori elenco» finché non lo rimetti.`)) return; L.splice(i, 1); }
+  else return;
+  change();
+});
+function addItem() {
+  const nm = $('#nn').value.trim().replace(/\s+/g, ' ');
+  if (!nm) return;
+  if (L.some(x => low(x) === low(nm))) { msg('«' + nm + '» è già nell’ordine.', true); return; }
+  const pos = +$('#np').value;
+  L.splice(pos < 0 ? L.length : pos + 1, 0, nm); $('#nn').value = ''; change(); msg('Aggiunto: ricordati di salvare.');
+}
+$('#addb').onclick = addItem;
+$('#nn').onkeydown = e => { if (e.key === 'Enter') addItem(); };
+
+// ---- Trascinamento ----
+let drag = null;
+const rowOf = e => e.target.closest && e.target.closest('li.r');
+document.addEventListener('dragstart', e => { const li = rowOf(e); if (!li) return; drag = +li.dataset.i; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', ''); li.classList.add('dragging'); });
+document.addEventListener('dragover', e => { const li = rowOf(e); if (li && drag !== null) { e.preventDefault(); document.querySelectorAll('.over').forEach(x => x.classList.remove('over')); li.classList.add('over'); } });
+document.addEventListener('drop', e => {
+  const li = rowOf(e); if (!li || drag === null) return;
+  e.preventDefault(); const [x] = L.splice(drag, 1); L.splice(+li.dataset.i, 0, x); drag = null; change();
+});
+document.addEventListener('dragend', () => { drag = null; document.querySelectorAll('.dragging,.over').forEach(x => x.classList.remove('dragging', 'over')); });
+
+// ---- Salvataggio ----
+$('#save').onclick = async () => {
+  $('#save').disabled = true;
+  try { await saveCfg('ordine-strumenti.json', L); setDirty(false); msg('Ordine salvato per tutta la banda.'); }
+  catch (e) { msg('Non sono riuscito a salvare: ' + e.message, true); $('#save').disabled = false; }
+};
+render();
+</script>
+</body>
+</html>

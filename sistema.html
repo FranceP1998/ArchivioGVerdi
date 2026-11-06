@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Sistema archivio · pagina temporanea</title>
+<title>Controllo archivio · Archivio spartiti</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Karla:wght@400;600&family=Piazzolla:wght@500;700&family=Space+Mono&display=swap">
 <style>
 :root{--navy:#1E1937;--orange:#EF7135;--green:#008367;--wine:#620E1C;--cream:#F6E1C9;--gold:#F0BC0F;--sage:#7EA681;--sky:#BBDEF5;--ink:#1C1C1F}
@@ -34,14 +34,26 @@ button:focus-visible,select:focus-visible,summary:focus-visible,input:focus-visi
 .bar label,.inc{font-weight:400;display:flex;align-items:center;gap:.4rem;margin:.4rem 0}
 .mono,pre,small{font-family:'Space Mono',monospace;font-size:.85rem}
 details{border-top:1px solid var(--sage);padding:.6rem 0}
-summary{cursor:pointer;color:var(--navy)}
+summary{display:flex;align-items:center;gap:.6rem;cursor:pointer;color:var(--navy);list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:'▸';color:var(--sage)}
+details[open]>summary::before{content:'▾'}
+.sn{flex:1;min-width:0}
+.okr{display:flex;align-items:center;gap:.6rem;border-top:1px solid var(--sage);padding:.45rem 0}
+.un{padding:0!important;width:1.8rem;height:1.8rem;border-width:1px!important;line-height:1}
+.mk{display:flex;align-items:center;gap:.6rem}
+.mk span{flex:1}
 summary small{margin-left:.5rem;color:var(--ink)}
 ol{list-style:none;margin:.5rem 0;padding:0 0 0 1rem}
-ol li{display:grid;grid-template-columns:1fr 1.5rem 1fr;gap:.5rem;padding:.15rem 0;font-size:.95rem;word-break:break-word}
+ol li{display:grid;grid-template-columns:1fr 1.5rem 1fr 2rem;align-items:center;gap:.5rem;padding:.15rem 0;font-size:.95rem;word-break:break-word}
 .u{margin:.5rem 0 .5rem 1rem}
+.nav{display:flex;gap:1.25rem;flex-wrap:wrap}
+.nav a{color:var(--navy);font-weight:600;text-decoration:none;padding:.25rem 0;border-bottom:3px solid transparent}
+.nav a[aria-current]{border-bottom-color:var(--orange)}
+.nav a:hover{border-bottom-color:var(--sage)}
 .warn{color:var(--wine);font-weight:600}
 pre{white-space:pre-wrap;margin:.75rem 0 0}
-.rnb{float:right;margin-left:.5rem;padding:.1rem .8rem;font-size:.9rem}
+.rnb{margin-left:auto;flex:none;padding:.1rem .8rem;font-size:.9rem}
 .bar input[type=text]{padding:.5rem .6rem;border:1px solid var(--navy);border-radius:6px;background:#fff;font:inherit;flex:1;min-width:14rem;max-width:100%}
 .u input{padding:.4rem .5rem;border:1px solid var(--navy);border-radius:6px;max-width:100%}
 .u button{padding:.25rem .8rem}
@@ -50,14 +62,15 @@ pre{white-space:pre-wrap;margin:.75rem 0 0}
 <body>
 <header>
   <a href="https://www.corpomusicalegverdi.it/"><img class="logo" src="https://www.corpomusicalegverdi.it/wp-content/uploads/2026/01/Marchio-Ufficiale-Orizzontale.svg" alt="Corpo Musicale “G. Verdi” di Venaria Reale"></a>
+  <nav class="nav"><a href="archivio.html">Archivio</a><a href="divisione.html">Aggiungi brano</a><a href="stampa.html">Stampa brano</a><a href="cartellina.html">Crea per strumento</a><a href="organico.html">Organico</a><a href="ordine.html">Ordine parti</a><a href="sistema.html" aria-current="page">Controllo</a></nav>
   <div class="acc"><span id="st">Non connesso</span><button id="login">Accedi con Google</button></div>
 </header>
-<div class="band"><h1>Sistema archivio</h1><p>Pagina temporanea: controlla, riordina e rinomina le parti dei brani già divisi</p></div>
+<div class="band"><h1>Controllo archivio</h1><p>Controlla, riordina e rinomina le parti dei brani già divisi</p></div>
 
 <main>
   <section>
     <h2>1. Analisi</h2>
-    <p>Per ogni brano il sito legge i nomi dei PDF, li riconosce, li mette nell’ordine classico e prepara i nuovi nomi. Non cambia nulla finché non lo confermi.</p>
+    <p>Per ogni brano il sito legge i nomi dei PDF, li riconosce, li mette nell’ordine classico e prepara i nuovi nomi, e segnala i brani senza il file «Parti». Non cambia nulla finché non lo confermi.</p>
     <div class="bar">
       <label><input type="checkbox" class="ck" value="concerto" checked> Brani da concerto</label>
       <label><input type="checkbox" class="ck" value="marce" checked> Marce</label>
@@ -124,7 +137,7 @@ try { const s0 = JSON.parse(SS.get('sess')); if (s0 && s0.e > Date.now()) { tok 
 const N = (b, k) => Array.from({length: k}, (_, i) => b + ' ' + (i + 1));
 const T = (b, ps, ts) => ts.flatMap(t => ps.map(p => (p ? b + ' ' + p : b) + ' in ' + t));
 const TON = ['C BC', 'C TC', 'Bb BC', 'Bb TC', 'Eb BC', 'Eb TC'], D = b => [...N(b, 2), b + ' 1 e 2', b];
-const DEF = ['Ottavino', ...N('Flauto', 2), 'Flauto 1 e 2', 'Flauto', ...D('Oboe'), ...D('Corno Inglese'), ...D('Fagotto'), 'Clarinetto in Eb', ...N('Clarinetto', 3), 'Clarinetto', 'Clarinetto basso',
+const DEF = ['Ottavino', 'Ottavino e Flauto', 'Ottavino e Flauto 1', ...N('Flauto', 2), 'Flauto 1 e 2', 'Flauto', ...D('Oboe'), ...D('Corno Inglese'), ...D('Fagotto'), 'Clarinetto in Eb', ...N('Clarinetto', 3), 'Clarinetto', 'Clarinetto basso',
   'Sax Soprano', ...N('Sax Contralto', 2), 'Sax Contralto', ...N('Sax Tenore', 2), 'Sax Tenore', 'Sax Baritono',
   ...N('Flicorno', 3), 'Flicorno', ...N('Cornetta', 3), 'Cornetta', ...N('Tromba', 4), 'Tromba',
   ...T('Corno', ['1','2','3','4',''], ['F','Eb','Bb']), 'Eufonio in C BC', 'Eufonio in Bb TC', 'Eufonio in C TC', 'Eufonio in Bb BC',
@@ -202,16 +215,21 @@ async function scan(b) {
   return {b, items};
 }
 function replan(r) {
-  const parts = r.items.filter(i => i.kind === 'part').map((i, pos) => ({i, pos, c: canon(i.raw)}));
+  r.mark = r.mark || {}; r.force = r.force || {};
+  const all = r.items.filter(i => i.kind === 'part'), base = i => i.f.name.replace(/\.pdf$/i, '');
+  const parts = all.filter(i => !r.mark[i.f.id]).map((i, pos) => ({i, pos, c: r.force[i.f.id] ? null : canon(i.raw)}));
   const unknown = parts.filter(p => !p.c).map(p => p.i);
   const n9 = p => p.i.num == null ? 999 : p.i.num;
   const oldIds = [...parts].sort((a, b) => n9(a) - n9(b) || a.pos - b.pos).map(p => p.i.f.id).join();
   const rows = parts.filter(p => p.c).sort((a, b) => ord(a.c) - ord(b.c) || n9(a) - n9(b) || a.pos - b.pos).map((p, n) => {
-    const was = p.i.f.name.replace(/\.pdf$/i, ''), nw = `${r.b.name} - ${pad(n + 1)} ${p.c}`;
+    const was = base(p.i), nw = `${r.b.name} - ${pad(n + 1)} ${p.c}`;
     return {item: p.i, was, nw, changed: was !== nw};
   });
-  r.plan = {rows, unknown, orderChanged: rows.map(x => x.item.f.id).join() !== oldIds};
-  r.ok = !unknown.length && !rows.some(x => x.changed);
+  const marked = all.filter(i => r.mark[i.f.id]);
+  const scoreRows = marked.filter(i => r.mark[i.f.id] === 'score').map(i => { const was = base(i), nw = `${r.b.name} - Partitura`; return {item: i, was, nw, changed: was !== nw}; });
+  const noParti = !r.items.some(i => i.kind === 'parti');
+  r.plan = {rows, unknown, marked, scoreRows, noParti, orderChanged: rows.map(x => x.item.f.id).join() !== oldIds};
+  r.ok = !unknown.length && !marked.length && !noParti && !rows.some(x => x.changed);
   if (r.apply === undefined) r.apply = false;
   if (r.regen === undefined) r.regen = false;
 }
@@ -229,29 +247,51 @@ $('#an').onclick = async () => {
 };
 
 // ---- Risultato ----
+const MK = {orig: 'Originale (nome invariato)', score: 'Partitura', skip: 'Ignorato per ora'};
+function unknownHtml(r, i, u) {
+  const gs = guess(u.raw), k = esc(key(u.raw)), hasScore = r.items.some(x => x.kind === 'score'), d = `data-i="${i}" data-f="${u.f.id}" data-k="${k}"`;
+  return `<p class="u"><span class="warn">«${esc(u.f.name)}» non assegnato</span><br>Assegna a: <select class="sl" ${d}><option value="">Scegli…</option>${gs ? `<option value="${esc(gs)}">Suggerito: ${esc(gs)}</option>` : ''}<option value="@orig">Originale (lascia il file com’è)</option>${hasScore ? '' : '<option value="@score">Partitura</option>'}<option value="@skip">Ignora per ora</option>${L.map(x => `<option>${esc(x)}</option>`).join('')}</select><br>Oppure aggiungi un nuovo strumento: <input class="nn" value="${esc(u.raw)}" aria-label="Nome del nuovo strumento"> dopo <select class="np" aria-label="Posizione nell’ordine">${L.map(x => `<option${x === 'Pianoforte' ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select> <button type="button" class="add" ${d}>Aggiungi e assegna</button></p>`;
+}
 function render() {
   const todo = res.filter(r => !r.ok), blocked = todo.filter(r => r.plan.unknown.length).length;
-  $('#sum').textContent = `${res.length} brani analizzati: ${res.length - todo.length} a posto, ${todo.length} da sistemare` + (blocked ? `, di cui ${blocked} con nomi da assegnare` : '') + '.';
+  $('#sum').textContent = `${res.length} brani analizzati: ${res.length - todo.length} a posto, ${todo.length} da sistemare` + (blocked ? `, di cui ${blocked} con file da assegnare` : '') + '.';
   $('#list').innerHTML = todo.map(r => {
-    const i = res.indexOf(r), ch = r.plan.rows.filter(x => x.changed);
-    return `<details data-i="${i}" ${r.open ? 'open' : ''}><summary><button type="button" class="rnb" data-i="${i}">Rinomina</button><b>${esc(r.b.name)}</b><small>${LBL[r.b.k]} · ${ch.length} da rinominare${r.plan.unknown.length ? ' · ' + r.plan.unknown.length + ' da assegnare' : ''}</small></summary>
-      ${r.plan.unknown.map(u => { const gs = guess(u.raw), k = esc(key(u.raw)); return `<p class="u"><span class="warn">«${esc(u.raw)}» non riconosciuto</span><br>Assegna a: <select class="sl" data-k="${k}"><option value="">Scegli lo strumento</option>${gs ? `<option value="${esc(gs)}">Suggerito: ${esc(gs)}</option>` : ''}${L.map(x => `<option>${esc(x)}</option>`).join('')}</select><br>Oppure aggiungi un nuovo strumento: <input class="nn" value="${esc(u.raw)}" aria-label="Nome del nuovo strumento"> dopo <select class="np" aria-label="Posizione nell’ordine">${L.map(x => `<option${x === 'Pianoforte' ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select> <button type="button" class="add" data-k="${k}">Aggiungi e assegna</button></p>`; }).join('')}
-      <ol>${ch.map(x => `<li><span>${esc(x.was)}</span><span>→</span><span>${esc(x.nw)}</span></li>`).join('')}</ol>
-      <label class="inc"><input type="checkbox" class="cb" data-w="ap" data-i="${i}" ${r.apply ? 'checked' : ''} ${r.plan.unknown.length ? 'disabled' : ''}> Applica a questo brano</label>
-      <label class="inc"><input type="checkbox" class="cb" data-w="rg" data-i="${i}" ${r.regen ? 'checked' : ''}> Rigenera il file «Parti» con il nuovo ordine</label></details>`;
+    const i = res.indexOf(r), p = r.plan, ch = [...p.rows, ...p.scoreRows].filter(x => x.changed);
+    return `<details data-i="${i}" ${r.open ? 'open' : ''}><summary><span class="sn"><b>${esc(r.b.name)}</b><small>${LBL[r.b.k]}${ch.length ? ' · ' + ch.length + ' da rinominare' : ''}${p.unknown.length ? ' · ' + p.unknown.length + ' da assegnare' : ''}${p.noParti ? ' · manca «Parti»' : ''}${p.marked.length ? ' · ' + p.marked.length + ' segnati' : ''}</small></span><button type="button" class="rnb" data-i="${i}">Rinomina</button></summary>
+      ${p.unknown.map(u => unknownHtml(r, i, u)).join('')}
+      ${p.marked.map(it => `<p class="u mk"><span>«${esc(it.f.name)}» → ${MK[r.mark[it.f.id]]}${r.mark[it.f.id] === 'score' ? ' (diventa «' + esc(r.b.name) + ' - Partitura»)' : ''}</span><button type="button" class="un" data-i="${i}" data-f="${it.f.id}" data-t="mark" aria-label="Rimetti tra quelle da assegnare">✕</button></p>`).join('')}
+      ${p.rows.some(x => x.changed) ? `<ol>${p.rows.filter(x => x.changed).map(x => `<li><span>${esc(x.was)}</span><span>→</span><span>${esc(x.nw)}</span><button type="button" class="un" data-i="${i}" data-f="${x.item.f.id}" data-t="row" aria-label="Rimetti tra quelle da assegnare">✕</button></li>`).join('')}</ol>` : ''}
+      ${p.noParti ? '<p class="u warn">Manca il file «Parti»: spunta qui sotto per crearlo.</p>' : ''}
+      <label class="inc"><input type="checkbox" class="cb" data-w="ap" data-i="${i}" ${r.apply ? 'checked' : ''} ${p.unknown.length ? 'disabled' : ''}> Applica a questo brano</label>
+      <label class="inc"><input type="checkbox" class="cb" data-w="rg" data-i="${i}" ${r.regen ? 'checked' : ''}> ${p.noParti ? 'Crea il file «Parti» (manca)' : 'Rigenera il file «Parti» con il nuovo ordine'}</label></details>`;
   }).join('');
   const okl = res.filter(r => r.ok);
-  $('#okl').innerHTML = okl.length ? `<details id="okd" ${okOpen ? 'open' : ''}><summary>Brani già a posto (${okl.length})</summary>${okl.map(r => `<p class="u"><button type="button" class="rnb" data-i="${res.indexOf(r)}">Rinomina</button> ${esc(r.b.name)} <small>${LBL[r.b.k]}</small></p>`).join('')}</details>` : '';
+  $('#okl').innerHTML = okl.length ? `<details id="okd" ${okOpen ? 'open' : ''}><summary><span class="sn">Brani già a posto (${okl.length})</span></summary>${okl.map(r => `<div class="okr"><span class="sn">${esc(r.b.name)} <small>${LBL[r.b.k]}</small></span><button type="button" class="rnb" data-i="${res.indexOf(r)}">Rinomina</button></div>`).join('')}</details>` : '';
   $('#ap').disabled = !res.some(r => !r.ok && r.apply && !r.plan.unknown.length);
 }
 $('#list').addEventListener('change', e => {
   const t = e.target;
-  if (t.classList.contains('sl')) { if (t.value) { alias[t.dataset.k] = t.value; res.forEach(replan); render(); } }
-  else if (t.classList.contains('cb')) { const r = res[+t.dataset.i]; if (t.dataset.w === 'ap') { r.apply = t.checked; r.aSet = true; } else { r.regen = t.checked; r.gSet = true; } render(); }
+  if (t.classList.contains('sl')) {
+    if (!t.value) return;
+    const r = res[+t.dataset.i];
+    if (t.value[0] === '@') r.mark[t.dataset.f] = t.value.slice(1);
+    else { alias[t.dataset.k] = t.value; delete r.force[t.dataset.f]; }
+    res.forEach(replan); render();
+  } else if (t.classList.contains('cb')) {
+    const r = res[+t.dataset.i];
+    if (t.dataset.w === 'ap') r.apply = t.checked; else r.regen = t.checked;
+    render();
+  }
 });
 $('#list').addEventListener('click', async e => {
-  const t = e.target; if (!t.classList.contains('add')) return;
-  const p = t.closest('p'), nm = p.querySelector('.nn').value.trim(), after = p.querySelector('.np').value;
+  const t = e.target.closest('button'); if (!t) return;
+  if (t.classList.contains('un')) {
+    const r = res[+t.dataset.i];
+    if (t.dataset.t === 'mark') delete r.mark[t.dataset.f]; else r.force[t.dataset.f] = true;
+    replan(r); render(); return;
+  }
+  if (!t.classList.contains('add')) return;
+  const p = t.closest('p'), nm = p.querySelector('.nn').value.trim(), after = p.querySelector('.np').value, r = res[+t.dataset.i];
   if (!nm) return;
   const ex = L.find(x => key(x) === key(nm));
   if (ex) alias[t.dataset.k] = ex;
@@ -261,6 +301,7 @@ $('#list').addEventListener('click', async e => {
     try { await saveOrder(nl); } catch (err) { $('#log').textContent += 'Non sono riuscito a salvare l’ordine: ' + err.message + '\n'; return; }
     L = nl; alias[t.dataset.k] = nm; $('#log').textContent += `Aggiunto «${nm}» all’ordine classico (salvato per tutta la banda).\n`;
   }
+  delete r.force[t.dataset.f];
   res.forEach(replan); render();
 });
 $('#list').addEventListener('toggle', e => { const d = e.target; if (d.dataset && d.dataset.i) res[+d.dataset.i].open = d.open; }, true);
@@ -286,13 +327,13 @@ $('#ap').onclick = async () => {
   try {
     for (const r of sel) {
       log(`${r.b.name}: rinomino…`);
-      for (const x of r.plan.rows) if (x.changed)
+      for (const x of [...r.plan.rows, ...r.plan.scoreRows]) if (x.changed)
         await g(`https://www.googleapis.com/drive/v3/files/${x.item.f.id}?supportsAllDrives=true`, {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name: x.nw + '.pdf'})});
       if (r.regen) { log(`${r.b.name}: rigenero «Parti»…`); await regen(r); }
-      const fresh = await scan(r.b); r.items = fresh.items; r.apply = false; r.regen = false; replan(r);
+      const fresh = await scan(r.b); r.items = fresh.items; r.apply = false; r.regen = false; r.force = {}; Object.keys(r.mark).forEach(id => { if (r.mark[id] === 'score') delete r.mark[id]; }); replan(r);
       log(`✓ ${r.b.name}`);
     }
-    log('Fatto. I brani sistemati risultano ora a posto.');
+    log('Fatto. I brani sistemati risultano ora a posto; quelli con file segnati come originali o ignorati restano nell’elenco finché non li correggi dal Drive.');
   } catch (e) { log('Errore: ' + e.message); }
   render();
 };

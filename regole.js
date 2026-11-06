@@ -22,6 +22,7 @@
     if (n.startsWith('percussioni')) return {base: 'percussioni', roles: [], ton, solo};
     if (/\s+solo$/.test(n)) { solo = true; n = n.replace(/\s+solo$/, ''); }
     if ((m = n.match(/\s+in\s+((?:c|bb|eb|f)(?:\s+(?:bc|tc))?)$/))) { ton = m[1]; n = n.slice(0, m.index); }
+    if ((m = n.match(/^ottavino e flauto(?:\s+(\d+))?$/))) return {base: 'flauto', roles: m[1] ? [m[1]] : [], ton: null, solo, ott: true}; // vale anche per l'ottavino
     if (n === 'clarinetto' && ton === 'eb') return {base: 'clarinetto in eb', roles: [], ton: null, solo};
     if (n === 'clarinetto basso') return {base: n, roles: [], ton, solo};
     m = n.match(/^(.*?)\s+(\d+|basso)(?:\s+e\s+(?:\1\s+)?(\d+|basso))?$/);
@@ -33,7 +34,11 @@
   // Copie di un ruolo dell'organico: restituisce [{part: nome in minuscolo, n}]
   function alloc(PP, role, n, pref) {
     let q = parsePart(role);
-    if (q.base === 'ottavino' && !PP.some(x => x.base === 'ottavino')) q = {base: 'flauto', roles: ['1']};
+    if (q.base === 'ottavino' && !PP.some(x => x.base === 'ottavino')) {
+      const c = PP.find(x => x.ott); // parte "Ottavino e Flauto" (o "Ottavino e Flauto 1"): va anche all'ottavino
+      if (c) return [{part: low(c.p.name), n}];
+      q = {base: 'flauto', roles: ['1']};
+    }
     let b = q.base;
     if (b === 'tromba' && !PP.some(x => x.base === 'tromba') && PP.some(x => x.base === 'cornetta')) b = 'cornetta';
     const T = TONL[b] ? ([...TONL[b], null].find(t => PP.some(x => x.base === b && x.ton === t)) ?? 'none') : undefined;
