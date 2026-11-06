@@ -61,7 +61,7 @@ li label{font-weight:400;color:var(--ink)}
 <body>
 <header>
   <a href="https://www.corpomusicalegverdi.it/"><img class="logo" src="https://www.corpomusicalegverdi.it/wp-content/uploads/2026/01/Marchio-Ufficiale-Orizzontale.svg" alt="Corpo Musicale “G. Verdi” di Venaria Reale"></a>
-  <nav class="nav"><a href="archivio.html">Archivio</a><a href="stampa.html" aria-current="page">Stampa</a><a href="divisione.html">Divisione PDF</a></nav>
+  <nav class="nav"><a href="archivio.html">Archivio</a><a href="stampa.html" aria-current="page">Stampa</a><a href="cartellina.html">Cartellina</a><a href="divisione.html">Divisione PDF</a></nav>
   <div class="acc"><span id="st">Non connesso</span><button id="login">Accedi con Google</button></div>
 </header>
 <div class="band"><h1>Stampa</h1><p>Le copie giuste per ogni strumento, secondo l’organico</p></div>
@@ -112,17 +112,14 @@ li label{font-weight:400;color:var(--ink)}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="regole.js"></script>
 <script>
 const CFG = {
   CLIENT_ID: '461215269916-tcd8cfsa5m951ohohibf4f8635tdgolp.apps.googleusercontent.com',
   FOLDERS: {concerto: '1wWMSp-kyX2K6Kk1hJfuv3gISgkoQBX4V', marce: '1M0-uSG4jsO-P6SG-MY1MoNd_aAppM8Dp'}
 };
 const LBL = {concerto: 'Brani da concerto', marce: 'Marce'};
-const COMUNE = '1 corno 1\n1 corno 2\n1 corno 3\n1 corno 4\n2 tromba 1\n1 tromba 2\n2 tromba 3\n1 trombone 1\n1 trombone 2\n1 trombone 3\n1 eufonio\n4 tuba';
-const ORG0 = {
-  concerto: '1 oboe\n2 flauto 1\n2 flauto 2\n3 clarinetto 1\n4 clarinetto 2\n4 clarinetto 3\n2 sax contralto 1\n2 sax contralto 2\n3 sax tenore\n1 sax baritono\n' + COMUNE,
-  marce: '2 flauto 1\n2 flauto 2\n5 clarinetto 1\n3 clarinetto 2\n3 clarinetto 3\n2 sax contralto 1\n2 sax contralto 2\n4 sax tenore\n1 sax baritono\n' + COMUNE
-};
+const ORG0 = Regole.ORG0;
 const $ = s => document.querySelector(s), low = s => s.toLowerCase().trim();
 const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const API = 'https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives';
@@ -247,55 +244,8 @@ async function pick(b) {
   show();
 }
 
-// ---- Regole di assegnazione: da organico e parti disponibili alle copie ----
-function parseOrg(t) { return t.split('\n').map(l => l.trim().match(/^(\d+)\s+(.+)$/)).filter(Boolean).map(m => ({n: +m[1], role: m[2].trim()})); }
-function calc() {
-  const org = parseOrg($(cur.k === 'marce' ? '#om' : '#oc').value);
-  const P = new Map(parts.map(p => [low(p.name), p])), has = n => P.has(n);
-  const any = s => parts.some(p => low(p.name).startsWith(s));
-  const ton = (pre, L) => L.find(t => parts.some(p => low(p.name).startsWith(pre) && low(p.name).endsWith(' in ' + t))) || L[0];
-  const one = (c, n) => { const p = c.find(has); return p ? [{part: p, n}] : []; };
-  const sp = (a, b, n) => [{part: a, n: Math.ceil(n / 2)}, {part: b, n: Math.floor(n / 2)}];
-  const N = (b, k) => [[`${b} 1`, `${b} 1 e 2`, b], [`${b} 2`, `${b} 1 e 2`, b, `${b} 1`], [`${b} 3`, `${b} 2`, `${b} 1 e 2`, b, `${b} 1`]][k - 1] || [b];
-  const alloc = (role, n) => {
-    const r = low(role), m = r.match(/^(.*?) (\d)$/), b = m && m[1], k = m && +m[2];
-    if (r === 'ottavino') return one(['ottavino', ...N('flauto', 1)], n);
-    if (m && ['flauto', 'clarinetto', 'sax contralto'].includes(b)) return one(N(b, k), n);
-    if (m && ['tromba', 'cornetta'].includes(b)) {
-      const t = any('tromba') ? 'tromba' : any('cornetta') ? 'cornetta' : 'tromba';
-      if (k === 3 && has(t + ' 4') && has(t + ' 3')) return sp(t + ' 3', t + ' 4', n);
-      return one(N(t, k), n);
-    }
-    if (m && b === 'corno') {
-      const T = ton('corno ', ['f', 'eb', 'bb']), c = x => `corno ${x} in ${T}`, s = `corno in ${T}`;
-      return one([[c(1), s], [c(2), s, c(1)], [c(3), c(1), s], [c(4), c(3), c(2), s, c(1)]][k - 1] || [s], n);
-    }
-    if (m && b === 'trombone') {
-      const T = ton('trombone ', ['c bc', 'bb bc', 'eb bc']), t = x => `trombone ${x} in ${T}`, s = `trombone in ${T}`;
-      return one([[t(1), s], [t(2), s, t(1)], [t(3), t('basso'), t(2), s, t(1)]][k - 1] || [s], n);
-    }
-    if (r === 'sax tenore') return has('sax tenore 1') && has('sax tenore 2') ? sp('sax tenore 1', 'sax tenore 2', n) : one(['sax tenore', 'sax tenore 1 e 2', 'sax tenore 1'], n);
-    if (r === 'tuba') {
-      const T = ton('tuba', ['c bc', 'bb bc', 'eb bc']), t = x => `tuba${x} in ${T}`;
-      return has(t(' 1')) && has(t(' 2')) ? sp(t(' 1'), t(' 2'), n) : one([t(''), t(' 1 e 2'), t(' 1')], n);
-    }
-    if (r === 'eufonio') return one(['eufonio in c bc', 'eufonio in bb tc'], n);
-    return one([r, r + ' 1 e 2', r + ' 1'], n);
-  };
-  const res = org.map(o => ({...o, al: alloc(o.role, o.n)})), extra = {}, cnt = {};
-  parts.filter(p => / solo$/i.test(p.name)).forEach(p => {
-    const b = low(p.name).slice(0, -5), o = res.find(x => low(x.role) === b + ' 1') || res.find(x => low(x.role) === b);
-    if (o) { if (o.al[0] && o.n > 1) o.al[0].n -= 1; extra[low(p.name)] = 1; }
-  });
-  res.forEach(o => o.al.forEach(a => { cnt[a.part] = (cnt[a.part] || 0) + a.n; }));
-  Object.assign(cnt, extra);
-  parts.filter(p => /^percussioni/i.test(p.name)).forEach(p => { cnt[low(p.name)] = 1; });
-  return {
-    rows: parts.filter(p => cnt[low(p.name)] > 0).map(p => ({p, n: cnt[low(p.name)]})),
-    warn: res.filter(o => !o.al.length).map(o => `Nessuna parte trovata per «${o.role}» (${o.n} musici).`),
-    skip: parts.filter(p => !(cnt[low(p.name)] > 0)).map(p => p.name)
-  };
-}
+// Le regole di assegnazione sono in regole.js
+const calc = () => Regole.calc(parts, $(cur.k === 'marce' ? '#om' : '#oc').value);
 const mode = () => document.querySelector('input[name=m]:checked').value;
 document.querySelectorAll('input[name=m]').forEach(r => r.onchange = show);
 $('#sel').onchange = $('#nc').oninput = () => show();
