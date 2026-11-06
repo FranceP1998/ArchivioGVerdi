@@ -16,6 +16,39 @@
     eufonio: ['c bc', 'bb tc']
   };
 
+  // ---- Percussioni: la posizione di una parte dipende dal gruppo, deciso da parole chiave ----
+  const norm = x => String(x).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const KW0 = {
+    'timpani': ['timpani', 'timpano'],
+    'mallet': ['mallet', 'glockenspiel', 'vibrafono', 'marimba', 'xilofono', 'campane', 'campane tubolari', 'celesta'],
+    'batteria': ['batteria'],
+    'rullante': ['rullante'],
+    'cassa e piatti': ['cassa', 'grancassa', 'piatti']
+  };
+  let KW = KW0;
+  const setKeywords = o => { KW = o && typeof o === 'object' ? o : KW0; };
+  // I gruppi sono le voci "Percussioni - Gruppo" dell'ordine classico, nell'ordine in cui sono scritte (vince la prima)
+  function percKey(name, L) {
+    const exact = L.indexOf(name); if (exact >= 0) return exact;
+    const gen = L.indexOf('Percussioni'), fb = gen >= 0 ? gen : 9999;
+    const rest = norm(String(name).replace(/^percussioni\s*[-–:]?\s*/i, ''));
+    if (!rest) return fb;
+    if (/^\d+$/.test(rest)) { const i = L.findIndex(x => norm(x) === 'percussioni ' + rest); return i >= 0 ? i : fb; }
+    for (let i = 0; i < L.length; i++) {
+      const m = L[i].match(/^percussioni\s*-\s*(.+)$/i); if (!m) continue;
+      const g = norm(m[1]), words = [g, ...(KW[g] || (KW0[g] || [])).map(norm)];
+      if (words.some(w => w && (' ' + rest + ' ').includes(' ' + w + ' '))) return i;
+    }
+    return fb;
+  }
+  // Posizione di una parte nell'ordine classico (9999 = fuori elenco)
+  function ordKey(n, L) {
+    let i = L.indexOf(n); if (i >= 0) return i;
+    if (/^percussioni/i.test(n)) return percKey(n, L);
+    if (/ solo$/i.test(n)) { const b = n.slice(0, -5); i = L.indexOf(b + ' 1'); if (i < 0) i = L.indexOf(b); if (i >= 0) return i - .5; }
+    return 9999;
+  }
+
   // "Corno 3 e 4 in F" -> {base: 'corno', roles: ['3','4'], ton: 'f'}; "Trombone 3 e Trombone Basso in C BC" -> roles ['3','basso']
   function parsePart(name) {
     let n = low(name), solo = false, ton = null, m;
@@ -91,5 +124,5 @@
     return a ? parts.find(p => low(p.name) === a.part) : null;
   }
 
-  (typeof window !== 'undefined' ? window : globalThis).Regole = {ORG0, parseOrg, parsePart, calc, partFor};
+  (typeof window !== 'undefined' ? window : globalThis).Regole = {ORG0, KW0, parseOrg, parsePart, calc, partFor, percKey, ordKey, setKeywords, getKeywords: () => KW, norm};
 })();

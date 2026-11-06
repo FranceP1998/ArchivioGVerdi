@@ -91,6 +91,7 @@ pre{white-space:pre-wrap;margin:.75rem 0 0}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="regole.js"></script>
 <script>
 const CFG = {
   CLIENT_ID: '461215269916-tcd8cfsa5m951ohohibf4f8635tdgolp.apps.googleusercontent.com',
@@ -163,6 +164,11 @@ async function start() {
   $('#pg').textContent = 'Carico ordine e brani…';
   try {
     L = (await loadOrder()) || DEF; brani = [];
+    try {
+      const kq = `'${parent}' in parents and name='percussioni-parole.json' and trashed=false`;
+      const kr = await g(`${API}&fields=files(id)&q=${encodeURIComponent(kq)}`);
+      if (kr.files.length) Regole.setKeywords(await g(`https://www.googleapis.com/drive/v3/files/${kr.files[0].id}?alt=media&supportsAllDrives=true`));
+    } catch (e) {}
     for (const k of Object.keys(CFG.FOLDERS)) {
       let pt = '';
       do {
@@ -181,14 +187,14 @@ const ROM = {i: '1', ii: '2', iii: '3', iv: '4'};
 const key = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(' ').map(w => ROM[w] || w).join(' ');
 const ord = n => {
   let i = L.indexOf(n); if (i >= 0) return i;
-  if (n.startsWith('Percussioni')) return L.indexOf('Percussioni');
+  if (/^percussioni/i.test(n)) return Regole.percKey(n, L);
   if (n.endsWith(' Solo')) { const b = n.slice(0, -5); i = L.indexOf(b + ' 1'); if (i < 0) i = L.indexOf(b); if (i >= 0) return i - .5; }
   return 9999;
 };
 function canon(rawName) {
   const k = key(rawName);
   if (alias[k]) return alias[k];
-  if (/^percussioni/.test(k)) { const r = rawName.replace(/^percussioni\s*[-–:]?\s*/i, '').trim(); return r ? 'Percussioni - ' + r : 'Percussioni'; }
+  if (/^percussioni/.test(k)) { const r = rawName.replace(/^percussioni\s*[-–:]?\s*/i, '').trim(); return !r ? 'Percussioni' : /^\d+$/.test(r) ? 'Percussioni ' + r : 'Percussioni - ' + r; }
   const solo = / solo$/.test(k), base = solo ? k.replace(/ solo$/, '') : k, hit = L.find(x => key(x) === base);
   return hit ? (solo ? hit + ' Solo' : hit) : null;
 }
@@ -215,9 +221,9 @@ async function scan(b) {
   return {b, items};
 }
 function replan(r) {
-  r.mark = r.mark || {}; r.force = r.force || {};
+  r.mark = r.mark || {}; r.force = r.force || {}; r.custom = r.custom || {};
   const all = r.items.filter(i => i.kind === 'part'), base = i => i.f.name.replace(/\.pdf$/i, '');
-  const parts = all.filter(i => !r.mark[i.f.id]).map((i, pos) => ({i, pos, c: r.force[i.f.id] ? null : canon(i.raw)}));
+  const parts = all.filter(i => !r.mark[i.f.id]).map((i, pos) => ({i, pos, c: r.force[i.f.id] ? null : (r.custom[i.f.id] || canon(i.raw))}));
   const unknown = parts.filter(p => !p.c).map(p => p.i);
   const n9 = p => p.i.num == null ? 999 : p.i.num;
   const oldIds = [...parts].sort((a, b) => n9(a) - n9(b) || a.pos - b.pos).map(p => p.i.f.id).join();
@@ -248,9 +254,10 @@ $('#an').onclick = async () => {
 
 // ---- Risultato ----
 const MK = {orig: 'Originale (nome invariato)', score: 'Partitura', skip: 'Ignorato per ora'};
+const pfill = raw => /^percussion/i.test(raw) ? raw.replace(/^percussion\w*\s*[-–:]?\s*/i, '').trim() : '';
 function unknownHtml(r, i, u) {
   const gs = guess(u.raw), k = esc(key(u.raw)), hasScore = r.items.some(x => x.kind === 'score'), d = `data-i="${i}" data-f="${u.f.id}" data-k="${k}"`;
-  return `<p class="u"><span class="warn">«${esc(u.f.name)}» non assegnato</span><br>Assegna a: <select class="sl" ${d}><option value="">Scegli…</option>${gs ? `<option value="${esc(gs)}">Suggerito: ${esc(gs)}</option>` : ''}<option value="@orig">Originale (lascia il file com’è)</option>${hasScore ? '' : '<option value="@score">Partitura</option>'}<option value="@skip">Ignora per ora</option>${L.map(x => `<option>${esc(x)}</option>`).join('')}</select><br>Oppure aggiungi un nuovo strumento: <input class="nn" value="${esc(u.raw)}" aria-label="Nome del nuovo strumento"> dopo <select class="np" aria-label="Posizione nell’ordine">${L.map(x => `<option${x === 'Pianoforte' ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select> <button type="button" class="add" ${d}>Aggiungi e assegna</button></p>`;
+  return `<p class="u"><span class="warn">«${esc(u.f.name)}» non assegnato</span><br>Assegna a: <select class="sl" ${d}><option value="">Scegli…</option>${gs ? `<option value="${esc(gs)}">Suggerito: ${esc(gs)}</option>` : ''}<option value="@orig">Originale (lascia il file com’è)</option>${hasScore ? '' : '<option value="@score">Partitura</option>'}<option value="@skip">Ignora per ora</option>${L.map(x => `<option>${esc(x)}</option>`).join('')}</select><br>Oppure è una percussione: «Percussioni - » <input class="pn" value="${esc(pfill(u.raw))}" placeholder="nome, per esempio Triangolo" aria-label="Nome della percussione"> <button type="button" class="perc" ${d}>Assegna come percussione</button><br>Oppure aggiungi un nuovo strumento: <input class="nn" value="${esc(u.raw)}" aria-label="Nome del nuovo strumento"> dopo <select class="np" aria-label="Posizione nell’ordine">${L.map(x => `<option${x === 'Pianoforte' ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select> <button type="button" class="add" ${d}>Aggiungi e assegna</button></p>`;
 }
 function render() {
   const todo = res.filter(r => !r.ok), blocked = todo.filter(r => r.plan.unknown.length).length;
@@ -287,8 +294,14 @@ $('#list').addEventListener('click', async e => {
   const t = e.target.closest('button'); if (!t) return;
   if (t.classList.contains('un')) {
     const r = res[+t.dataset.i];
-    if (t.dataset.t === 'mark') delete r.mark[t.dataset.f]; else r.force[t.dataset.f] = true;
+    if (t.dataset.t === 'mark') delete r.mark[t.dataset.f]; else { r.force[t.dataset.f] = true; delete r.custom[t.dataset.f]; }
     replan(r); render(); return;
+  }
+  if (t.classList.contains('perc')) {
+    const r = res[+t.dataset.i], nm = t.closest('p').querySelector('.pn').value.trim().replace(/\s+/g, ' ');
+    if (!nm) { alert('Scrivi il nome della percussione, per esempio Triangolo.'); return; }
+    r.custom[t.dataset.f] = /^\d+$/.test(nm) ? 'Percussioni ' + nm : 'Percussioni - ' + nm;
+    delete r.force[t.dataset.f]; replan(r); render(); return;
   }
   if (!t.classList.contains('add')) return;
   const p = t.closest('p'), nm = p.querySelector('.nn').value.trim(), after = p.querySelector('.np').value, r = res[+t.dataset.i];
@@ -330,7 +343,7 @@ $('#ap').onclick = async () => {
       for (const x of [...r.plan.rows, ...r.plan.scoreRows]) if (x.changed)
         await g(`https://www.googleapis.com/drive/v3/files/${x.item.f.id}?supportsAllDrives=true`, {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name: x.nw + '.pdf'})});
       if (r.regen) { log(`${r.b.name}: rigenero «Parti»…`); await regen(r); }
-      const fresh = await scan(r.b); r.items = fresh.items; r.apply = false; r.regen = false; r.force = {}; Object.keys(r.mark).forEach(id => { if (r.mark[id] === 'score') delete r.mark[id]; }); replan(r);
+      const fresh = await scan(r.b); r.items = fresh.items; r.apply = false; r.regen = false; r.force = {}; r.custom = {}; Object.keys(r.mark).forEach(id => { if (r.mark[id] === 'score') delete r.mark[id]; }); replan(r);
       log(`✓ ${r.b.name}`);
     }
     log('Fatto. I brani sistemati risultano ora a posto; quelli con file segnati come originali o ignorati restano nell’elenco finché non li correggi dal Drive.');

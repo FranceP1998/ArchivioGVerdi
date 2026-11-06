@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Parole chiave percussioni · Archivio spartiti</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Karla:wght@400;600&family=Piazzolla:wght@500;700&family=Space+Mono&display=swap">
+<style>
+:root{--navy:#1E1937;--orange:#EF7135;--green:#008367;--wine:#620E1C;--cream:#F6E1C9;--gold:#F0BC0F;--sage:#7EA681;--sky:#BBDEF5;--ink:#1C1C1F}
+*{box-sizing:border-box}
+body{margin:0;background:var(--cream);color:var(--ink);font:16px/1.55 Karla,sans-serif}
+h1,h2{font-family:Piazzolla,serif;margin:0;font-weight:700;color:var(--navy)}
+h1{font-size:clamp(2rem,5vw,3rem);color:var(--cream);line-height:1.1}
+h2{font-size:1.5rem}
+header{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;padding:.9rem clamp(1rem,4vw,3rem);background:#fff;border-bottom:4px solid var(--orange)}
+.logo{display:block;height:48px;width:auto;max-width:100%}
+.acc{display:flex;align-items:center;gap:.75rem}
+.nav{display:flex;gap:1.25rem;flex-wrap:wrap}
+.nav a{color:var(--navy);font-weight:600;text-decoration:none;padding:.25rem 0;border-bottom:3px solid transparent}
+.nav a[aria-current]{border-bottom-color:var(--orange)}
+.nav a:hover{border-bottom-color:var(--sage)}
+#st{padding:.2rem .7rem;border-radius:999px;background:var(--sky);color:var(--navy);font-family:'Space Mono',monospace;font-size:.85rem}
+#st.on{background:var(--green);color:#fff}
+.band{background:var(--navy);padding:2rem clamp(1rem,4vw,3rem) 2.25rem}
+.band p{margin:.4rem 0 0;color:var(--cream);font-size:1.1rem}
+main{padding:1.5rem clamp(1rem,4vw,3rem) 3rem}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;align-items:start}
+@media(max-width:900px){.cols{grid-template-columns:1fr}}
+section{background:#fff;border-radius:12px;padding:1.25rem;border-top:6px solid var(--navy)}
+section.sf{border-top-color:var(--orange)}
+.head{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;margin-bottom:.75rem}
+.tot{font-family:'Space Mono',monospace;font-size:.85rem}
+input,button{font:inherit;color:inherit}
+input[type=text]{padding:.5rem .6rem;border:1px solid var(--navy);border-radius:6px;background:#fff;color:var(--ink);max-width:100%}
+input:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+button{cursor:pointer;border:2px solid var(--navy);background:#fff;color:var(--navy);padding:.5rem 1rem;border-radius:999px;font-weight:600}
+button:hover:not(:disabled){background:var(--sky)}
+button.main{background:var(--orange);border-color:var(--orange)}
+button.main:hover:not(:disabled){background:var(--gold);border-color:var(--gold)}
+button:disabled{background:var(--cream);border-color:var(--cream);cursor:not-allowed}
+[hidden]{display:none!important}
+ol{list-style:none;margin:0;padding:0}
+li.r{display:flex;align-items:center;gap:.6rem;padding:.4rem .5rem;margin:.25rem 0;border:1px solid var(--sage);border-radius:10px;background:#fff}
+li.r.dragging{opacity:.4}
+li.r.over{background:var(--sky)}
+.grip{cursor:grab;color:var(--sage);font-size:1.2rem;line-height:1;user-select:none}
+.nm{flex:1;font-weight:600;color:var(--navy)}
+.st{display:flex;align-items:center;gap:.25rem}
+.st button{padding:0;width:2rem;height:2rem;border-width:1px;font-size:1.1rem;line-height:1}
+.st input{width:3.2rem;text-align:center;font-family:'Space Mono',monospace;padding:.3rem;border:1px solid var(--navy);border-radius:6px}
+.act button{padding:.15rem .55rem;border-width:1px;margin-left:.2rem}
+.add{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.9rem}
+.add input{flex:1;min-width:10rem}
+.hint{font-size:.9rem;margin:.25rem 0 1rem}
+.warn{color:var(--wine);font-weight:600}
+.savebar{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin:1.25rem 0}
+details{background:#fff;border-radius:12px;padding:.9rem 1.25rem}
+summary{cursor:pointer;font-weight:600;color:var(--navy)}
+details button{margin:.25rem .25rem .25rem 0}
+.mono{font-family:'Space Mono',monospace;font-size:.85rem}
+.kw{margin:.5rem 0 1rem}
+.kw label{display:block;font-weight:600;color:var(--navy);margin-bottom:.2rem}
+.kw input{width:100%}
+.res{margin-top:.75rem;font-family:'Space Mono',monospace;font-size:.9rem}
+.wide{max-width:50rem}
+</style>
+</head>
+<body>
+<header>
+  <a href="https://www.corpomusicalegverdi.it/"><img class="logo" src="https://www.corpomusicalegverdi.it/wp-content/uploads/2026/01/Marchio-Ufficiale-Orizzontale.svg" alt="Corpo Musicale “G. Verdi” di Venaria Reale"></a>
+  <nav class="nav"><a href="archivio.html">Archivio</a><a href="divisione.html">Aggiungi brano</a><a href="stampa.html">Stampa brano</a><a href="cartellina.html">Crea per strumento</a><a href="organico.html">Organico</a><a href="ordine.html">Ordine parti</a><a href="sistema.html">Controllo</a></nav>
+  <div class="acc"><span id="st">Non connesso</span><button id="login">Accedi con Google</button></div>
+</header>
+<div class="band"><h1>Parole chiave delle percussioni</h1><p>Scheda nascosta: mette ogni percussione nel gruppo giusto</p></div>
+
+<main class="wide">
+  <p class="hint">I gruppi sono le voci «Percussioni - …» dell’ordine classico, nell’ordine in cui sono scritte. Per ogni gruppo scrivi le parole che lo riconoscono, separate da virgole. Una parte finisce nel primo gruppo, secondo l’ordine, che contiene una di queste parole (maiuscole e accenti non contano). Quello che non riconosce va in «Percussioni», in fondo. Il nome del file della parte non cambia mai.</p>
+  <section>
+    <div class="head"><h2>Gruppi</h2><span class="tot" id="tot"></span></div>
+    <div id="groups"></div>
+  </section>
+  <section class="sf">
+    <h2>Prova</h2>
+    <p class="hint">Scrivi il nome di una parte e guarda dove finirebbe.</p>
+    <input type="text" id="try" placeholder="Percussioni - Vibrafono e Marimba" aria-label="Nome della parte da provare">
+    <p class="res" id="tryres"></p>
+  </section>
+  <div class="savebar"><button id="save" class="main" disabled>Salva parole chiave per tutta la banda</button><span id="smsg" class="mono">Accedi con Google per iniziare.</span></div>
+</main>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="regole.js"></script>
+<script>
+const CFG = {
+  CLIENT_ID: '461215269916-tcd8cfsa5m951ohohibf4f8635tdgolp.apps.googleusercontent.com',
+  FOLDERS: {concerto: '1wWMSp-kyX2K6Kk1hJfuv3gISgkoQBX4V', marce: '1M0-uSG4jsO-P6SG-MY1MoNd_aAppM8Dp'}
+};
+const $ = s => document.querySelector(s), low = s => s.toLowerCase().trim();
+const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const cap = s => s.replace(/\b\w/g, c => c.toUpperCase()).replace(/ In /g, ' in ');
+const API = 'https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives';
+const KS = ['concerto', 'marce'], toText = a => a.map(x => `${x.n} ${x.role}`).join('\n');
+let tok, org = {concerto: [], marce: []}, saved = null, isDirty = false, loaded = false;
+const msg = (t, warn) => { $('#smsg').textContent = t; $('#smsg').className = 'mono' + (warn ? ' warn' : ''); };
+
+// ---- Accesso (la sessione è condivisa con le altre pagine) ----
+const SS = {
+  get: k => { try { return sessionStorage.getItem(k); } catch (e) { return null; } },
+  set: (k, v) => { try { sessionStorage.setItem(k, v); } catch (e) {} },
+  del: k => { try { sessionStorage.removeItem(k); } catch (e) {} }
+};
+function connected(name) { $('#st').textContent = name ? 'Ciao ' + name : 'Connesso'; $('#st').className = 'on'; $('#login').hidden = true; start(); }
+function expired() { tok = null; SS.del('sess'); $('#st').textContent = 'Sessione scaduta'; $('#st').className = ''; $('#login').hidden = false; }
+$('#login').onclick = () => {
+  if (!window.google) { $('#st').textContent = 'Servizio Google non raggiungibile'; return; }
+  google.accounts.oauth2.initTokenClient({
+    client_id: CFG.CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive openid profile', hd: 'corpomusicalegverdi.it',
+    callback: async r => {
+      if (!r.access_token) return;
+      tok = r.access_token; let name = '';
+      try { const u = await g('https://www.googleapis.com/oauth2/v3/userinfo'); name = u.given_name || u.name || ''; } catch (e) {}
+      SS.set('sess', JSON.stringify({t: tok, n: name, e: Date.now() + ((Number(r.expires_in) || 3600) - 120) * 1000}));
+      connected(name);
+    }
+  }).requestAccessToken();
+};
+async function raw(url, opt = {}) {
+  const r = await fetch(url, {...opt, headers: {...(opt.headers || {}), Authorization: 'Bearer ' + tok}});
+  if (r.status === 401) { expired(); throw new Error('Sessione scaduta: accedi di nuovo con Google.'); }
+  if (!r.ok) throw new Error(await r.text());
+  return r;
+}
+const g = async (u, o) => (await raw(u, o)).json();
+try { const s0 = JSON.parse(SS.get('sess')); if (s0 && s0.e > Date.now()) { tok = s0.t; window.addEventListener('load', () => connected(s0.n)); } } catch (e) {}
+
+// ---- File di configurazione sul Drive (con copia di sicurezza su GitHub in dati/) ----
+const CF = {}; let parent;
+async function parentId() {
+  if (!parent) parent = (await g(`https://www.googleapis.com/drive/v3/files/${CFG.FOLDERS.concerto}?fields=parents&supportsAllDrives=true`)).parents[0];
+  return parent;
+}
+async function backup(name) { try { const x = await fetch('dati/' + name); if (x.ok) return await x.json(); } catch (e) {} return null; }
+async function loadCfg(name) {
+  const q = `'${await parentId()}' in parents and name='${name}' and trashed=false`;
+  const r = await g(`${API}&fields=files(id)&q=${encodeURIComponent(q)}`);
+  if (!r.files.length) return backup(name);
+  CF[name] = r.files[0].id;
+  return g(`https://www.googleapis.com/drive/v3/files/${CF[name]}?alt=media&supportsAllDrives=true`);
+}
+async function saveCfg(name, obj) {
+  const body = JSON.stringify(obj);
+  if (CF[name]) return g(`https://www.googleapis.com/upload/drive/v3/files/${CF[name]}?uploadType=media&supportsAllDrives=true`, {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body});
+  const f = new FormData();
+  f.append('metadata', new Blob([JSON.stringify({name, parents: [await parentId()]})], {type: 'application/json'}));
+  f.append('file', new Blob([body], {type: 'application/json'}));
+  CF[name] = (await g('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id', {method: 'POST', body: f})).id;
+}
+
+let L = [], groups = [];
+const FILE = 'percussioni-parole.json';
+function setDirty(v) { isDirty = v; $('#save').disabled = !(tok && loaded && v); if (v) msg('Modifiche non ancora salvate.'); }
+window.addEventListener('beforeunload', e => { if (isDirty) { e.preventDefault(); e.returnValue = ''; } });
+const words = t => t.split(',').map(x => x.trim()).filter(Boolean);
+const current = () => { const o = {}; groups.forEach(g => { o[g.id] = words($('#kw-' + g.idx).value); }); return o; };
+
+async function start() {
+  msg('Carico i gruppi…');
+  try {
+    const x = await loadCfg('ordine-strumenti.json'); L = Array.isArray(x) ? x : [];
+    const kw = (await loadCfg(FILE)) || Regole.KW0;
+    groups = L.map(n => n.match(/^percussioni\s*-\s*(.+)$/i)).filter(Boolean).map((m, idx) => ({idx, name: m[1].trim(), id: Regole.norm(m[1])}));
+    $('#groups').innerHTML = groups.length ? groups.map(g => `<div class="kw"><label for="kw-${g.idx}">${esc(g.name)}</label><input type="text" id="kw-${g.idx}" value="${esc((kw[g.id] || Regole.KW0[g.id] || [g.id]).join(', '))}"></div>`).join('')
+      : '<p class="warn">Nell’ordine classico non ci sono voci «Percussioni - …»: aggiungile dalla scheda Ordine parti.</p>';
+    $('#tot').textContent = groups.length + ' gruppi'; loaded = true; setDirty(false); apply(); msg('Parole chiave caricate.');
+  } catch (e) { msg('Errore: ' + e.message, true); }
+}
+function apply() { Regole.setKeywords(current()); test(); }
+function test() {
+  const n = $('#try').value.trim(); if (!n) { $('#tryres').textContent = ''; return; }
+  const i = Regole.percKey(/^percussioni/i.test(n) ? n : 'Percussioni - ' + n, L);
+  $('#tryres').textContent = i === 9999 ? 'Fuori elenco: manca la voce «Percussioni» nell’ordine.' : `→ ${L[i]} (posizione ${i + 1} nell’ordine)`;
+}
+$('#try').oninput = test;
+$('#groups').addEventListener('input', () => { setDirty(true); apply(); });
+$('#save').onclick = async () => {
+  $('#save').disabled = true;
+  try { await saveCfg(FILE, current()); setDirty(false); msg('Parole chiave salvate per tutta la banda.'); }
+  catch (e) { msg('Non sono riuscito a salvare: ' + e.message, true); $('#save').disabled = false; }
+};
+</script>
+</body>
+</html>
