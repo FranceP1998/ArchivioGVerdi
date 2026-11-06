@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Cartellina · Archivio spartiti</title>
+<title>Cartellina e libretto · Archivio spartiti</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Karla:wght@400;600&family=Piazzolla:wght@500;700&family=Space+Mono&display=swap">
 <style>
 :root{--navy:#1E1937;--orange:#EF7135;--green:#008367;--wine:#620E1C;--cream:#F6E1C9;--gold:#F0BC0F;--sage:#7EA681;--sky:#BBDEF5;--ink:#1C1C1F}
@@ -11,7 +11,7 @@
 body{margin:0;background:var(--cream);color:var(--ink);font:16px/1.55 Karla,sans-serif}
 h1,h2{font-family:Piazzolla,serif;margin:0;font-weight:700;color:var(--navy)}
 h1{font-size:clamp(2rem,5vw,3rem);color:var(--cream);line-height:1.1}
-h2{font-size:1.3rem;margin-bottom:.6rem}
+h2{font-size:1.5rem}
 header{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;padding:.9rem clamp(1rem,4vw,3rem);background:#fff;border-bottom:4px solid var(--orange)}
 .logo{display:block;height:48px;width:auto;max-width:100%}
 .acc{display:flex;align-items:center;gap:.75rem}
@@ -23,8 +23,12 @@ header{display:flex;justify-content:space-between;align-items:center;gap:1rem;fl
 #st.on{background:var(--green);color:#fff}
 .band{background:var(--navy);padding:2rem clamp(1rem,4vw,3rem) 2.25rem}
 .band p{margin:.4rem 0 0;color:var(--cream);font-size:1.1rem}
-main{padding:1.5rem clamp(1rem,4vw,3rem) 3rem;max-width:60rem}
-section{background:#fff;border-radius:12px;padding:1.25rem;margin-bottom:1.25rem}
+main{padding:1.5rem clamp(1rem,4vw,3rem) 3rem}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;align-items:start}
+@media(max-width:900px){.cols{grid-template-columns:1fr}}
+section{background:#fff;border-radius:12px;padding:1.25rem;border-top:6px solid var(--navy)}
+section.lib{border-top-color:var(--orange)}
+.sub{margin:.1rem 0 .9rem;font-family:'Space Mono',monospace;font-size:.85rem}
 label{font-weight:600;color:var(--navy)}
 input,select,button{font:inherit;color:inherit}
 input[type=text],select{padding:.5rem .6rem;border:1px solid var(--navy);border-radius:6px;background:#fff;color:var(--ink);max-width:100%}
@@ -35,10 +39,11 @@ button.main{background:var(--orange);border-color:var(--orange)}
 button.main:hover:not(:disabled){background:var(--gold);border-color:var(--gold)}
 button:disabled{background:var(--cream);border-color:var(--cream);cursor:not-allowed}
 [hidden]{display:none!important}
-.bar{display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;margin-bottom:.5rem}
-.bar input[type=text]{flex:1;min-width:14rem}
-.mode{display:flex;gap:1.5rem;flex-wrap:wrap;margin:.75rem 0}
+.bar{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin-bottom:.5rem}
+.bar input[type=text]{flex:1;min-width:12rem}
+.mode{display:flex;gap:1.25rem;flex-wrap:wrap;margin:.6rem 0}
 .mode label{font-weight:400;color:var(--ink)}
+hr{border:0;border-top:1px solid var(--sage);margin:1rem 0}
 ol{list-style:none;margin:.5rem 0;padding:0}
 li{display:flex;align-items:center;gap:.5rem;padding:.3rem 0;border-top:1px solid var(--sage)}
 li .t{flex:1}
@@ -54,34 +59,16 @@ a.dl{display:inline-block;margin-top:.75rem;font-weight:600;color:var(--navy)}
 <body>
 <header>
   <a href="https://www.corpomusicalegverdi.it/"><img class="logo" src="https://www.corpomusicalegverdi.it/wp-content/uploads/2026/01/Marchio-Ufficiale-Orizzontale.svg" alt="Corpo Musicale “G. Verdi” di Venaria Reale"></a>
-  <nav class="nav"><a href="archivio.html">Archivio</a><a href="stampa.html">Stampa</a><a href="cartellina.html" aria-current="page">Cartellina</a><a href="divisione.html">Divisione PDF</a></nav>
+  <nav class="nav"><a href="archivio.html">Archivio</a><a href="stampa.html">Stampa</a><a href="cartellina.html" aria-current="page">Cartellina</a><a href="organico.html">Organico</a><a href="divisione.html">Divisione PDF</a></nav>
   <div class="acc"><span id="st">Non connesso</span><button id="login">Accedi con Google</button></div>
 </header>
-<div class="band"><h1>Cartellina</h1><p>Le parti di un nuovo strumentista, brano per brano</p></div>
+<div class="band"><h1>Cartellina e libretto</h1><p>Le parti di un nuovo strumentista, brano per brano</p></div>
 
 <main>
-  <section>
-    <h2>Brani in cartellina</h2>
-    <p class="hint">L’elenco resta salvato sul Drive per tutta la banda finché non lo cambi. L’ordine dell’elenco è l’ordine dei brani nel PDF.</p>
-    <div class="bar"><input id="bq" type="text" list="dlb" placeholder="Titolo del brano" aria-label="Titolo del brano"><button id="add" disabled>Aggiungi</button></div>
-    <datalist id="dlb"></datalist>
-    <p id="msg" class="hint">Accedi con Google per iniziare.</p>
-    <ol id="cl"></ol>
-  </section>
-
-  <section>
-    <h2>PDF per uno strumento</h2>
-    <p class="hint">Scegli lo strumento: il sito prende, per ogni brano dell’elenco, la parte che suonerebbe un musicista di quel ruolo secondo le regole della banda.</p>
-    <div class="bar"><label for="rl">Strumento</label><select id="rl" aria-label="Strumento"></select></div>
-    <div id="ppw" class="bar" hidden><label for="pp">Parte, se il brano ha parti separate per questo strumento</label><select id="pp" aria-label="Parte"><option value="1">Parte 1</option><option value="2">Parte 2</option><option value="3">Parte 3</option></select></div>
-    <div id="lay" class="mode" hidden><span>Marce, su ogni foglio:</span>
-      <label><input type="radio" name="l" value="1" checked> 1 parte</label>
-      <label><input type="radio" name="l" value="2"> 2 parti A5 su un foglio A4</label>
-    </div>
-    <p><button id="go" class="main" disabled>Prepara il PDF</button></p>
-    <pre id="log"></pre>
-    <div id="link"></div>
-  </section>
+  <div class="cols">
+    <section id="p-c"></section>
+    <section id="p-l" class="lib"></section>
+  </div>
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
@@ -93,12 +80,16 @@ const CFG = {
   FOLDERS: {concerto: '1wWMSp-kyX2K6Kk1hJfuv3gISgkoQBX4V', marce: '1M0-uSG4jsO-P6SG-MY1MoNd_aAppM8Dp'}
 };
 const LBL = {concerto: 'Brani da concerto', marce: 'Marce'};
+// La cartellina è per i concerti (brani da concerto, a volte qualche marcia); il libretto è per le sfilate (solo marce)
+const PANELS = [
+  {k: 'c', title: 'Cartellina', sub: 'per i concerti · organico da concerto', file: 'cartellina.json', org: 'concerto', allow: ['concerto', 'marce']},
+  {k: 'l', title: 'Libretto', sub: 'per le sfilate · organico da sfilata', file: 'libretto.json', org: 'marce', allow: ['marce']}
+];
 const $ = s => document.querySelector(s), low = s => s.toLowerCase().trim();
 const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const cap = s => s.replace(/\b\w/g, c => c.toUpperCase());
 const API = 'https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives';
-let tok, brani = [], cart = [], dup = {};
-const msg = t => { $('#msg').textContent = t; $('#msg').className = 'hint'; };
+let tok, brani = [], dup = {};
 
 // ---- Accesso (la sessione è condivisa con le altre pagine) ----
 const SS = {
@@ -131,16 +122,17 @@ const g = async (u, o) => (await raw(u, o)).json();
 const gb = async u => (await raw(u)).arrayBuffer();
 try { const s0 = JSON.parse(SS.get('sess')); if (s0 && s0.e > Date.now()) { tok = s0.t; window.addEventListener('load', () => connected(s0.n)); } } catch (e) {}
 
-// ---- File di configurazione sul Drive (organico e cartellina) ----
+// ---- File di configurazione sul Drive (con copia di sicurezza su GitHub in dati/) ----
 const CF = {}; let parent;
 async function parentId() {
   if (!parent) parent = (await g(`https://www.googleapis.com/drive/v3/files/${CFG.FOLDERS.concerto}?fields=parents&supportsAllDrives=true`)).parents[0];
   return parent;
 }
+async function backup(name) { try { const x = await fetch('dati/' + name); if (x.ok) return await x.json(); } catch (e) {} return null; }
 async function loadCfg(name) {
   const q = `'${await parentId()}' in parents and name='${name}' and trashed=false`;
   const r = await g(`${API}&fields=files(id)&q=${encodeURIComponent(q)}`);
-  if (!r.files.length) return null;
+  if (!r.files.length) return backup(name);
   CF[name] = r.files[0].id;
   return g(`https://www.googleapis.com/drive/v3/files/${CF[name]}?alt=media&supportsAllDrives=true`);
 }
@@ -152,70 +144,10 @@ async function saveCfg(name, obj) {
   f.append('file', new Blob([body], {type: 'application/json'}));
   CF[name] = (await g('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id', {method: 'POST', body: f})).id;
 }
-async function persist() {
-  try { await saveCfg('cartellina.json', cart.map(c => ({id: c.id, name: c.name, k: c.k}))); msg('Cartellina salvata per tutta la banda.'); }
-  catch (e) { msg('Non sono riuscito a salvare: ' + e.message); $('#msg').className = 'hint warn'; }
-}
 
-// ---- Avvio: brani, organico (per l'elenco degli strumenti) e cartellina salvata ----
+// ---- Brani e parti ----
 const bf = id => brani.find(b => b.id === id);
 const lab = b => dup[low(b.name)] > 1 ? `${b.name} — ${LBL[b.k]}` : b.name;
-async function start() {
-  msg('Carico i brani…');
-  try {
-    const org = (await loadCfg('organico.json')) || Regole.ORG0, saved = await loadCfg('cartellina.json');
-    cart = Array.isArray(saved) ? saved : [];
-    brani = [];
-    for (const k of Object.keys(CFG.FOLDERS)) {
-      let pt = '';
-      do {
-        const q = `'${CFG.FOLDERS[k]}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`;
-        const r = await g(`${API}&pageSize=1000&orderBy=name&fields=nextPageToken,files(id,name)&q=${encodeURIComponent(q)}${pt ? '&pageToken=' + encodeURIComponent(pt) : ''}`);
-        r.files.forEach(f => brani.push({...f, k})); pt = r.nextPageToken;
-      } while (pt);
-    }
-    brani.sort((a, b) => a.name.localeCompare(b.name, 'it'));
-    brani.forEach(b => { dup[low(b.name)] = (dup[low(b.name)] || 0) + 1; });
-    $('#dlb').innerHTML = brani.map(b => `<option value="${esc(lab(b))}">`).join('');
-    const roles = [...new Set([...Regole.parseOrg(org.concerto || ''), ...Regole.parseOrg(org.marce || '')].map(o => o.role))];
-    $('#rl').innerHTML = roles.map(r => `<option value="${esc(r)}">${esc(cap(r))}</option>`).join('');
-    $('#add').disabled = false; msg(cart.length ? 'Cartellina caricata dal Drive.' : 'La cartellina è vuota: aggiungi i brani.');
-    render();
-  } catch (e) { msg('Errore: ' + e.message); $('#msg').className = 'hint warn'; }
-}
-
-// ---- Elenco dei brani in cartellina ----
-function render() {
-  $('#cl').innerHTML = cart.map((c, i) => {
-    const b = bf(c.id);
-    return `<li><span class="t">${i + 1}. ${b ? esc(b.name) : esc(c.name) + ' (non trovato nel Drive)'}<small>${LBL[(b || c).k] || ''}</small></span>
-      <span class="act"><button type="button" data-a="up" data-i="${i}" aria-label="Sposta su">↑</button><button type="button" data-a="dn" data-i="${i}" aria-label="Sposta giù">↓</button><button type="button" data-a="rm" data-i="${i}">Togli</button></span></li>`;
-  }).join('');
-  $('#ppw').hidden = !($('#rl').value && !Regole.parsePart($('#rl').value).roles.length);
-  $('#lay').hidden = !cart.some(c => (bf(c.id) || c).k === 'marce');
-  $('#go').disabled = !(tok && cart.length && $('#rl').value);
-}
-const findB = v => { const x = low(v); let c = brani.filter(b => low(lab(b)) === x); if (!c.length) c = brani.filter(b => low(b.name) === x); return c.length === 1 ? c[0] : null; };
-async function addBrano() {
-  const v = $('#bq').value.trim(); if (!v) return;
-  const b = findB(v);
-  if (!b) { msg('Scegli un brano dall’elenco (se ce ne sono due con lo stesso nome, scegli quello della cartella giusta).'); return; }
-  if (cart.some(c => c.id === b.id)) { msg('«' + b.name + '» è già in cartellina.'); return; }
-  cart.push({id: b.id, name: b.name, k: b.k}); $('#bq').value = ''; render(); await persist();
-}
-$('#add').onclick = addBrano;
-$('#bq').onkeydown = e => { if (e.key === 'Enter') addBrano(); };
-$('#cl').addEventListener('click', async e => {
-  const t = e.target.closest('button'); if (!t) return;
-  const i = +t.dataset.i, a = t.dataset.a;
-  if (a === 'rm') cart.splice(i, 1);
-  else if (a === 'up' && i > 0) [cart[i - 1], cart[i]] = [cart[i], cart[i - 1]];
-  else if (a === 'dn' && i < cart.length - 1) [cart[i + 1], cart[i]] = [cart[i], cart[i + 1]];
-  else return;
-  render(); await persist();
-});
-
-// ---- PDF per uno strumento ----
 async function partsOf(b) {
   const q = `'${b.id}' in parents and trashed=false`;
   const r = await g(`${API}&pageSize=200&orderBy=name&fields=files(id,name)&q=${encodeURIComponent(q)}`);
@@ -236,32 +168,116 @@ function sheets(out, cells) {
     });
   }
 }
-$('#rl').onchange = () => render();
-$('#go').onclick = async () => {
-  const role = $('#rl').value, log = m => { $('#log').textContent += m + '\n'; };
-  const two = !$('#lay').hidden && document.querySelector('input[name=l]:checked').value === '2';
-  $('#go').disabled = true; $('#log').textContent = ''; $('#link').innerHTML = '';
-  try {
-    const out = await PDFLib.PDFDocument.create(); let buf = [], found = 0;
-    const flush = () => { if (buf.length) { sheets(out, buf); buf = []; } };
-    for (const c of cart) {
+
+// ---- Un pannello (cartellina o libretto): elenco salvato + PDF per strumento ----
+function setup(p) {
+  const k = p.k, e = id => $(`#${k}-${id}`);
+  p.cart = [];
+  $(`#p-${k}`).innerHTML = `<h2>${p.title}</h2><p class="sub">${p.sub}</p>
+    <div class="bar"><input id="${k}-bq" type="text" list="${k}-dl" placeholder="Titolo del brano" aria-label="Titolo del brano"><button id="${k}-add" disabled>Aggiungi</button></div>
+    <datalist id="${k}-dl"></datalist>
+    <p id="${k}-msg" class="hint">Accedi con Google per iniziare.</p>
+    <ol id="${k}-cl"></ol>
+    <hr>
+    <div class="bar"><label for="${k}-rl">Strumento</label><select id="${k}-rl"></select></div>
+    <div id="${k}-ppw" class="bar" hidden><label for="${k}-pp">Parte, se il brano ha parti separate</label><select id="${k}-pp"><option value="1">Parte 1</option><option value="2">Parte 2</option><option value="3">Parte 3</option></select></div>
+    <div id="${k}-lay" class="mode" hidden><span>Marce, su ogni foglio:</span>
+      <label><input type="radio" name="${k}-l" value="1" checked> 1 parte</label>
+      <label><input type="radio" name="${k}-l" value="2"> 2 parti A5 su un foglio A4</label></div>
+    <p><button id="${k}-go" class="main" disabled>Prepara il PDF</button></p>
+    <pre id="${k}-log"></pre><div id="${k}-link"></div>`;
+  const msg = (t, warn) => { e('msg').textContent = t; e('msg').className = 'hint' + (warn ? ' warn' : ''); };
+  const allowed = () => brani.filter(b => p.allow.includes(b.k));
+  const persist = async () => {
+    try { await saveCfg(p.file, p.cart.map(c => ({id: c.id, name: c.name, k: c.k}))); msg(`${p.title} salvata per tutta la banda.`); }
+    catch (err) { msg('Non sono riuscito a salvare: ' + err.message, true); }
+  };
+  p.render = () => {
+    e('cl').innerHTML = p.cart.map((c, i) => {
       const b = bf(c.id);
-      if (!b) { log(`⚠ «${c.name}»: brano non trovato nel Drive`); continue; }
-      const p = Regole.partFor(await partsOf(b), role, $('#ppw').hidden ? null : $('#pp').value);
-      if (!p) { log(`⚠ ${b.name}: nessuna parte per ${cap(role)}`); continue; }
-      const d = await PDFLib.PDFDocument.load(await gb(`https://www.googleapis.com/drive/v3/files/${p.id}?alt=media&supportsAllDrives=true`), {ignoreEncryption: true});
-      if (two && b.k === 'marce') buf.push(...await out.embedPdf(d, d.getPageIndices()));
-      else { flush(); (await out.copyPages(d, d.getPageIndices())).forEach(x => out.addPage(x)); }
-      log(`✓ ${b.name}: ${p.name}`); found++;
+      return `<li><span class="t">${i + 1}. ${b ? esc(b.name) : esc(c.name) + ' (non trovato nel Drive)'}<small>${LBL[(b || c).k] || ''}</small></span>
+        <span class="act"><button type="button" data-a="up" data-i="${i}" aria-label="Sposta su">↑</button><button type="button" data-a="dn" data-i="${i}" aria-label="Sposta giù">↓</button><button type="button" data-a="rm" data-i="${i}">Togli</button></span></li>`;
+    }).join('');
+    const role = e('rl').value;
+    e('ppw').hidden = !(role && !Regole.parsePart(role).roles.length);
+    e('lay').hidden = !p.cart.some(c => (bf(c.id) || c).k === 'marce');
+    e('go').disabled = !(tok && p.cart.length && role);
+  };
+  p.init = (org, saved) => {
+    p.cart = Array.isArray(saved) ? saved.filter(c => p.allow.includes(c.k)) : [];
+    e('dl').innerHTML = allowed().map(b => `<option value="${esc(lab(b))}">`).join('');
+    e('rl').innerHTML = [...new Set(Regole.parseOrg(org[p.org] || '').map(o => o.role))].map(r => `<option value="${esc(r)}">${esc(cap(r))}</option>`).join('');
+    e('add').disabled = false;
+    msg(p.cart.length ? `${p.title} caricata dal Drive.` : `La ${p.title.toLowerCase()} è vuota: aggiungi i brani.`);
+    p.render();
+  };
+  const findB = v => { const x = low(v), l = allowed(); let c = l.filter(b => low(lab(b)) === x); if (!c.length) c = l.filter(b => low(b.name) === x); return c.length === 1 ? c[0] : null; };
+  const addBrano = async () => {
+    const v = e('bq').value.trim(); if (!v) return;
+    const b = findB(v);
+    if (!b) { msg(p.allow.length === 1 ? 'Scegli una marcia dall’elenco.' : 'Scegli un brano dall’elenco (se ce ne sono due con lo stesso nome, scegli quello della cartella giusta).'); return; }
+    if (p.cart.some(c => c.id === b.id)) { msg('«' + b.name + '» è già nell’elenco.'); return; }
+    p.cart.push({id: b.id, name: b.name, k: b.k}); e('bq').value = ''; p.render(); await persist();
+  };
+  e('add').onclick = addBrano;
+  e('bq').onkeydown = ev => { if (ev.key === 'Enter') addBrano(); };
+  e('cl').addEventListener('click', async ev => {
+    const t = ev.target.closest('button'); if (!t) return;
+    const i = +t.dataset.i, a = t.dataset.a, c = p.cart;
+    if (a === 'rm') c.splice(i, 1);
+    else if (a === 'up' && i > 0) [c[i - 1], c[i]] = [c[i], c[i - 1]];
+    else if (a === 'dn' && i < c.length - 1) [c[i + 1], c[i]] = [c[i], c[i + 1]];
+    else return;
+    p.render(); await persist();
+  });
+  e('rl').onchange = () => p.render();
+  e('go').onclick = async () => {
+    const role = e('rl').value, log = m => { e('log').textContent += m + '\n'; };
+    const two = !e('lay').hidden && document.querySelector(`input[name=${k}-l]:checked`).value === '2';
+    e('go').disabled = true; e('log').textContent = ''; e('link').innerHTML = '';
+    try {
+      const out = await PDFLib.PDFDocument.create(); let buf = [], found = 0;
+      const flush = () => { if (buf.length) { sheets(out, buf); buf = []; } };
+      for (const c of p.cart) {
+        const b = bf(c.id);
+        if (!b) { log(`⚠ «${c.name}»: brano non trovato nel Drive`); continue; }
+        const part = Regole.partFor(await partsOf(b), role, e('ppw').hidden ? null : e('pp').value);
+        if (!part) { log(`⚠ ${b.name}: nessuna parte per ${cap(role)}`); continue; }
+        const d = await PDFLib.PDFDocument.load(await gb(`https://www.googleapis.com/drive/v3/files/${part.id}?alt=media&supportsAllDrives=true`), {ignoreEncryption: true});
+        if (two && b.k === 'marce') buf.push(...await out.embedPdf(d, d.getPageIndices()));
+        else { flush(); (await out.copyPages(d, d.getPageIndices())).forEach(x => out.addPage(x)); }
+        log(`✓ ${b.name}: ${part.name}`); found++;
+      }
+      flush();
+      if (!found) throw new Error('Nessuna parte trovata per questo strumento.');
+      const url = URL.createObjectURL(new Blob([await out.save()], {type: 'application/pdf'}));
+      e('link').innerHTML = `<a class="dl" href="${url}" target="_blank" rel="noopener">Apri il PDF da stampare (${found} brani, ${out.getPageCount()} pagine)</a>`;
+    } catch (err) { log('Errore: ' + err.message); }
+    p.render();
+  };
+  p.msg = msg;
+}
+PANELS.forEach(setup);
+
+async function start() {
+  PANELS.forEach(p => p.msg('Carico i brani…'));
+  try {
+    const org = (await loadCfg('organico.json')) || Regole.ORG0, saved = [];
+    for (const p of PANELS) saved.push(await loadCfg(p.file));
+    brani = [];
+    for (const k of Object.keys(CFG.FOLDERS)) {
+      let pt = '';
+      do {
+        const q = `'${CFG.FOLDERS[k]}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+        const r = await g(`${API}&pageSize=1000&orderBy=name&fields=nextPageToken,files(id,name)&q=${encodeURIComponent(q)}${pt ? '&pageToken=' + encodeURIComponent(pt) : ''}`);
+        r.files.forEach(f => brani.push({...f, k})); pt = r.nextPageToken;
+      } while (pt);
     }
-    flush();
-    if (!found) throw new Error('Nessuna parte trovata per questo strumento.');
-    const url = URL.createObjectURL(new Blob([await out.save()], {type: 'application/pdf'}));
-    $('#link').innerHTML = `<a class="dl" href="${url}" target="_blank" rel="noopener">Apri il PDF da stampare (${found} brani, ${out.getPageCount()} pagine)</a>`;
-  } catch (e) { log('Errore: ' + e.message); }
-  render();
-};
-render();
+    brani.sort((a, b) => a.name.localeCompare(b.name, 'it'));
+    brani.forEach(b => { dup[low(b.name)] = (dup[low(b.name)] || 0) + 1; });
+    PANELS.forEach((p, i) => p.init(org, saved[i]));
+  } catch (err) { PANELS.forEach(p => p.msg('Errore: ' + err.message, true)); }
+}
 </script>
 </body>
 </html>
