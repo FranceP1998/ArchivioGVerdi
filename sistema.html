@@ -92,7 +92,7 @@ pre{white-space:pre-wrap;margin:.75rem 0 0}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="regole.js?v=7"></script>
+<script src="regole.js?v=9"></script>
 <script>
 const CFG = {
   CLIENT_ID: '461215269916-tcd8cfsa5m951ohohibf4f8635tdgolp.apps.googleusercontent.com',
@@ -235,7 +235,7 @@ async function scan(b) {
     const n = f.name.replace(/\.pdf$/i, '').trim();
     if (/(^|[\s_–-])parti$/i.test(n)) return {f, kind: 'parti'};
     if (/(^|[\s_–-])originale$/i.test(n)) return {f, kind: 'orig'};
-    if (/(^|[\s_–-])(?:partitura|conductor(?:[\s_-]+score)?)$/i.test(n)) return {f, kind: 'score'};
+    if (/(^|[\s_–-])(?:partitura|conductor(?:[\s_-]+score)?|(?:full[\s_-]+)?score)$/i.test(n)) return {f, kind: 'score'};
     const m = n.match(/^(?:.*? - )?(\d+)\s*[-–.)]*\s*(.+)$/);
     const sans = n.replace(new RegExp('^' + b.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[\\s_–-]*', 'i'), '').trim(); // via il titolo, con o senza trattino
     const alt = !m && sans === n && n.includes(' - ') ? n.slice(n.indexOf(' - ') + 3).trim() : null; // titolo diverso da quello della cartella
@@ -422,5 +422,7 @@ document.querySelector('main').addEventListener('click', async e => {
 });
 
 </script>
+<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F2</p>
+<script>document.getElementById('ver').textContent += ' · regole: ' + (window.Regole && Regole.build ? Regole.build : 'vecchie o non caricate');</script>
 </body>
 </html>
