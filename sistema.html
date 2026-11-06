@@ -134,7 +134,7 @@ async function loadOrder() {
   parent = (await g(`https://www.googleapis.com/drive/v3/files/${CFG.FOLDERS.concerto}?fields=parents&supportsAllDrives=true`)).parents[0];
   const q = `'${parent}' in parents and name='ordine-strumenti.json' and trashed=false`;
   const r = await g(`${API}&fields=files(id)&q=${encodeURIComponent(q)}`);
-  if (!r.files.length) return null;
+  if (!r.files.length) { try { const x = await fetch('dati/ordine-strumenti.json'); if (x.ok) return await x.json(); } catch (e) {} return null; }
   orderId = r.files[0].id;
   return g(`https://www.googleapis.com/drive/v3/files/${orderId}?alt=media&supportsAllDrives=true`);
 }
