@@ -166,7 +166,7 @@ async function renameBrano(b, list) {
   if (list.some(x => x.k === b.k && x.id !== b.id && x.name.toLowerCase() === nn.toLowerCase())) { alert('Esiste già un brano con questo nome in «' + LBL[b.k] + '».'); return false; }
   const q = `'${b.id}' in parents and trashed=false`;
   const r = await g(`${API}&pageSize=200&orderBy=name&fields=files(id,name)&q=${encodeURIComponent(q)}`);
-  const re = /^(.*?)( - (?:\d+\s|parti(?:\.pdf)?$|partitura(?:\.pdf)?$))/i;
+  const re = /^(.*?)( - (?:\d+\s|parti(?:\.pdf)?$|partitura(?:\.pdf)?$|originale(?:\.pdf)?$))/i;
   const files = r.files.map(f => { const m = f.name.match(re); return {f, nw: m ? nn + f.name.slice(m[1].length) : null}; }).filter(x => x.nw && x.nw !== x.f.name);
   const sample = files.slice(0, 6).map(x => `${x.f.name} → ${x.nw}`).join('\n') + (files.length > 6 ? `\n… e altri ${files.length - 6}` : '');
   if (!confirm(`Rinomino la cartella e ${files.length} file.\n\nCartella: ${b.name} → ${nn}\n${sample}\n\nProcedo?`)) return false;

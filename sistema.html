@@ -91,7 +91,7 @@ pre{white-space:pre-wrap;margin:.75rem 0 0}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="regole.js?v=4"></script>
+<script src="regole.js?v=7"></script>
 <script>
 const CFG = {
   CLIENT_ID: '461215269916-tcd8cfsa5m951ohohibf4f8635tdgolp.apps.googleusercontent.com',
@@ -161,6 +161,7 @@ async function saveOrder(nl) {
   orderId = (await g('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id', {method: 'POST', body: f})).id;
 }
 async function start() {
+  if (!(window.Regole && Regole.applySyn && Regole.percKey)) { $('#pg').textContent = 'ATTENZIONE: il file regole.js sul sito non è l’ultima versione. Caricalo di nuovo su GitHub e ricarica la pagina.'; $('#pg').className = 'mono warn'; return; }
   $('#pg').textContent = 'Carico ordine e brani…';
   try {
     L = (await loadOrder()) || DEF; brani = [];
@@ -184,14 +185,15 @@ async function start() {
 
 // ---- Riconoscimento dei nomi ----
 const ROM = {i: '1', ii: '2', iii: '3', iv: '4'};
-const key = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(' ').map(w => ROM[w] || w).join(' ');
+const ORD = {'1st': '1', '2nd': '2', '3rd': '3', '4th': '4'};
+const key = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(' ').map(w => ROM[w] || ORD[w] || w).join(' ');
 const ord = n => {
   let i = L.indexOf(n); if (i >= 0) return i;
   if (/^percussioni/i.test(n)) return (Regole.percKey ? Regole.percKey(n, L) : L.indexOf('Percussioni'));
   if (n.endsWith(' Solo')) { const b = n.slice(0, -5); i = L.indexOf(b + ' 1'); if (i < 0) i = L.indexOf(b); if (i >= 0) return i - .5; }
   return 9999;
 };
-const syn = x => (Regole.applySyn ? Regole.applySyn(x) : key(x));
+const syn = x => key(Regole.applySyn ? Regole.applySyn(x) : x);
 // Porta la tonalità nella forma dell'ordine ("corno 1 in f"): "bb clarinetto 1", "clarinetto bb 1" e "tromba in bb 1" diventano "... 1 in bb"
 const TN = '(c|bb|eb|f)(?: (bc|tc))?', inTon = (a, b) => ` in ${a}${b ? ' ' + b : ''}`;
 const tidy = x => {
@@ -202,11 +204,13 @@ const tidy = x => {
   return x;
 };
 const noTon = x => x.replace(/ in (?:c|bb|eb|f)(?: (?:bc|tc))?$/, '');
+// "Percussioni 1 e 2" resta tale; un nome libero diventa "Percussioni - Nome"
+const percName = r => { r = r.trim(); if (!r) return 'Percussioni'; return /^\d+(?:\s*(?:e|&|\+|,|-|–)\s*\d+)*$/i.test(r) ? 'Percussioni ' + r.match(/\d+/g).join(' e ') : 'Percussioni - ' + r; };
 function canon(rawName) {
   const k0 = key(rawName);
   if (alias[k0]) return alias[k0];
   const k = tidy(syn(rawName));
-  if (/^percussioni/.test(k)) { const r = rawName.replace(/^percussioni\s*[-–:]?\s*/i, '').trim(); return !r ? 'Percussioni' : /^\d+$/.test(r) ? 'Percussioni ' + r : 'Percussioni - ' + r; }
+  if (/^percussioni/.test(k)) { const ex = L.find(x => key(x) === k); return ex || percName(rawName.replace(/^perc(?:ussion\w*)?\.?\s*[-–:]?\s*/i, '')); }
   const solo = / solo$/.test(k), base = solo ? k.replace(/ solo$/, '') : k;
   // se la tonalità non è nell'ordine (es. "Tromba 1 in Bb") si ignora; se manca del tutto, si assume quella della banda (C BC per eufonio, tromboni e tube; F per i corni)
   const dt = /^(eufonio|trombone|tuba)( |$)/.test(base) ? ' in c bc' : /^corno( |$)/.test(base) ? ' in f' : null;
@@ -228,15 +232,30 @@ async function scan(b) {
   const r = await g(`${API}&pageSize=200&orderBy=name&fields=files(id,name,mimeType)&q=${encodeURIComponent(q)}`);
   const items = r.files.filter(f => /pdf/i.test(f.mimeType) || /\.pdf$/i.test(f.name)).map(f => {
     const n = f.name.replace(/\.pdf$/i, '').trim();
-    if (/(^|\s-\s)parti$/i.test(n)) return {f, kind: 'parti'};
-    if (/(^|\s-\s)partitura$/i.test(n)) return {f, kind: 'score'};
+    if (/(^|[\s_–-])parti$/i.test(n)) return {f, kind: 'parti'};
+    if (/(^|[\s_–-])originale$/i.test(n)) return {f, kind: 'orig'};
+    if (/(^|[\s_–-])(?:partitura|conductor(?:[\s_-]+score)?)$/i.test(n)) return {f, kind: 'score'};
     const m = n.match(/^(?:.*? - )?(\d+)\s*[-–.)]*\s*(.+)$/);
-    return {f, kind: 'part', raw: (m ? m[2] : n.replace(new RegExp('^' + b.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*-\\s*', 'i'), '')).trim(), num: m ? +m[1] : null};
+    const sans = n.replace(new RegExp('^' + b.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[\\s_–-]*', 'i'), '').trim(); // via il titolo, con o senza trattino
+    const alt = !m && sans === n && n.includes(' - ') ? n.slice(n.indexOf(' - ') + 3).trim() : null; // titolo diverso da quello della cartella
+    return {f, kind: 'part', raw: m ? m[2].trim() : sans, alt, full: sans, num: m ? +m[1] : null};
   });
   return {b, items};
 }
+// Cerca uno strumento dentro a un nome scritto male, anche senza trattini ("NessunDorma Tenor Sax 2"): prima la parte più lunga in fondo al nome, poi in mezzo
+function inside(text) {
+  const T = String(text).split(/[\s_–—\-.,;:()\[\]]+/).filter(Boolean), n = T.length;
+  for (let i = 0; i < n; i++) { const w = T.slice(i).join(' '); if (canon(w)) return w; }
+  for (let len = n - 1; len >= 1; len--) for (let s = n - len - 1; s >= 0; s--) { const w = T.slice(s, s + len).join(' '); if (canon(w)) return w; }
+  return null;
+}
 function replan(r) {
   r.mark = r.mark || {}; r.force = r.force || {}; r.custom = r.custom || {};
+  r.items.forEach(i => {
+    if (i.kind !== 'part' || canon(i.raw)) return;
+    if (i.alt && canon(i.alt)) i.raw = i.alt;
+    else { const w = inside(i.full || i.raw); if (w) i.raw = w; }
+  });
   const all = r.items.filter(i => i.kind === 'part'), base = i => i.f.name.replace(/\.pdf$/i, '');
   const parts = all.filter(i => !r.mark[i.f.id]).map((i, pos) => ({i, pos, c: r.force[i.f.id] ? null : (r.custom[i.f.id] || canon(i.raw))}));
   const unknown = parts.filter(p => !p.c).map(p => p.i);
@@ -248,8 +267,9 @@ function replan(r) {
   });
   const marked = all.filter(i => r.mark[i.f.id]);
   const scoreRows = marked.filter(i => r.mark[i.f.id] === 'score').map(i => { const was = base(i), nw = `${r.b.name} - Partitura`; return {item: i, was, nw, changed: was !== nw}; });
+  const origRows = marked.filter(i => r.mark[i.f.id] === 'orig').map(i => { const was = base(i), nw = was + ' - Originale'; return {item: i, was, nw, changed: true}; });
   const noParti = !r.items.some(i => i.kind === 'parti');
-  r.plan = {rows, unknown, marked, scoreRows, noParti, orderChanged: rows.map(x => x.item.f.id).join() !== oldIds};
+  r.plan = {rows, unknown, marked, scoreRows, origRows, noParti, orderChanged: rows.map(x => x.item.f.id).join() !== oldIds};
   r.ok = !unknown.length && !marked.length && !noParti && !rows.some(x => x.changed);
   if (r.apply === undefined) r.apply = false;
   if (r.regen === undefined) r.regen = false;
@@ -268,20 +288,20 @@ $('#an').onclick = async () => {
 };
 
 // ---- Risultato ----
-const MK = {orig: 'Originale (nome invariato)', score: 'Partitura', skip: 'Ignorato per ora'};
+const MK = {orig: 'Originale', score: 'Partitura', skip: 'Ignorato per ora'};
 const pfill = raw => /^percussion/i.test(raw) ? raw.replace(/^percussion\w*\s*[-–:]?\s*/i, '').trim() : '';
 function unknownHtml(r, i, u) {
   const gs = guess(u.raw), k = esc(key(u.raw)), hasScore = r.items.some(x => x.kind === 'score'), d = `data-i="${i}" data-f="${u.f.id}" data-k="${k}"`;
-  return `<p class="u"><span class="warn">«${esc(u.f.name)}» non assegnato</span><br>Assegna a: <select class="sl" ${d}><option value="">Scegli…</option>${gs ? `<option value="${esc(gs)}">Suggerito: ${esc(gs)}</option>` : ''}<option value="@orig">Originale (lascia il file com’è)</option>${hasScore ? '' : '<option value="@score">Partitura</option>'}<option value="@skip">Ignora per ora</option>${L.map(x => `<option>${esc(x)}</option>`).join('')}</select><br>Oppure è una percussione: «Percussioni - » <input class="pn" value="${esc(pfill(u.raw))}" placeholder="nome, per esempio Triangolo" aria-label="Nome della percussione"> <button type="button" class="perc" ${d}>Assegna come percussione</button><br>Oppure aggiungi un nuovo strumento: <input class="nn" value="${esc(u.raw)}" aria-label="Nome del nuovo strumento"> dopo <select class="np" aria-label="Posizione nell’ordine">${L.map(x => `<option${x === 'Pianoforte' ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select> <button type="button" class="add" ${d}>Aggiungi e assegna</button></p>`;
+  return `<p class="u"><span class="warn">«${esc(u.f.name)}» non assegnato</span><br>Assegna a: <select class="sl" ${d}><option value="">Scegli…</option>${gs ? `<option value="${esc(gs)}">Suggerito: ${esc(gs)}</option>` : ''}<option value="@orig">Originale (aggiunge « - Originale» al nome)</option>${hasScore ? '' : '<option value="@score">Partitura</option>'}<option value="@skip">Ignora per ora</option>${L.map(x => `<option>${esc(x)}</option>`).join('')}</select><br>Oppure è una percussione: «Percussioni - » <input class="pn" value="${esc(pfill(u.raw))}" placeholder="nome, per esempio Triangolo" aria-label="Nome della percussione"> <button type="button" class="perc" ${d}>Assegna come percussione</button><br>Oppure aggiungi un nuovo strumento: <input class="nn" value="${esc(u.raw)}" aria-label="Nome del nuovo strumento"> dopo <select class="np" aria-label="Posizione nell’ordine">${L.map(x => `<option${x === 'Pianoforte' ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select> <button type="button" class="add" ${d}>Aggiungi e assegna</button></p>`;
 }
 function render() {
   const todo = res.filter(r => !r.ok), blocked = todo.filter(r => r.plan.unknown.length).length;
   $('#sum').textContent = `${res.length} brani analizzati: ${res.length - todo.length} a posto, ${todo.length} da sistemare` + (blocked ? `, di cui ${blocked} con file da assegnare` : '') + '.';
   $('#list').innerHTML = todo.map(r => {
-    const i = res.indexOf(r), p = r.plan, ch = [...p.rows, ...p.scoreRows].filter(x => x.changed);
+    const i = res.indexOf(r), p = r.plan, ch = [...p.rows, ...p.scoreRows, ...p.origRows].filter(x => x.changed);
     return `<details data-i="${i}" ${r.open ? 'open' : ''}><summary><span class="sn"><b>${esc(r.b.name)}</b><small>${LBL[r.b.k]}${ch.length ? ' · ' + ch.length + ' da rinominare' : ''}${p.unknown.length ? ' · ' + p.unknown.length + ' da assegnare' : ''}${p.noParti ? ' · manca «Parti»' : ''}${p.marked.length ? ' · ' + p.marked.length + ' segnati' : ''}</small></span><button type="button" class="rnb" data-i="${i}">Rinomina</button></summary>
       ${p.unknown.map(u => unknownHtml(r, i, u)).join('')}
-      ${p.marked.map(it => `<p class="u mk"><span>«${esc(it.f.name)}» → ${MK[r.mark[it.f.id]]}${r.mark[it.f.id] === 'score' ? ' (diventa «' + esc(r.b.name) + ' - Partitura»)' : ''}</span><button type="button" class="un" data-i="${i}" data-f="${it.f.id}" data-t="mark" aria-label="Rimetti tra quelle da assegnare">✕</button></p>`).join('')}
+      ${p.marked.map(it => `<p class="u mk"><span>«${esc(it.f.name)}» → ${MK[r.mark[it.f.id]]}${r.mark[it.f.id] === 'score' ? ' (diventa «' + esc(r.b.name) + ' - Partitura»)' : r.mark[it.f.id] === 'orig' ? ' (diventa «' + esc(it.f.name.replace(/\.pdf$/i, '')) + ' - Originale»)' : ''}</span><button type="button" class="un" data-i="${i}" data-f="${it.f.id}" data-t="mark" aria-label="Rimetti tra quelle da assegnare">✕</button></p>`).join('')}
       ${p.rows.some(x => x.changed) ? `<ol>${p.rows.filter(x => x.changed).map(x => `<li><span>${esc(x.was)}</span><span>→</span><span>${esc(x.nw)}</span><button type="button" class="un" data-i="${i}" data-f="${x.item.f.id}" data-t="row" aria-label="Rimetti tra quelle da assegnare">✕</button></li>`).join('')}</ol>` : ''}
       ${p.noParti ? '<p class="u warn">Manca il file «Parti»: spunta qui sotto per crearlo.</p>' : ''}
       <label class="inc"><input type="checkbox" class="cb" data-w="ap" data-i="${i}" ${r.apply ? 'checked' : ''} ${p.unknown.length ? 'disabled' : ''}> Applica a questo brano</label>
@@ -315,7 +335,7 @@ $('#list').addEventListener('click', async e => {
   if (t.classList.contains('perc')) {
     const r = res[+t.dataset.i], nm = t.closest('p').querySelector('.pn').value.trim().replace(/\s+/g, ' ');
     if (!nm) { alert('Scrivi il nome della percussione, per esempio Triangolo.'); return; }
-    r.custom[t.dataset.f] = /^\d+$/.test(nm) ? 'Percussioni ' + nm : 'Percussioni - ' + nm;
+    r.custom[t.dataset.f] = percName(nm);
     delete r.force[t.dataset.f]; replan(r); render(); return;
   }
   if (!t.classList.contains('add')) return;
@@ -355,10 +375,10 @@ $('#ap').onclick = async () => {
   try {
     for (const r of sel) {
       log(`${r.b.name}: rinomino…`);
-      for (const x of [...r.plan.rows, ...r.plan.scoreRows]) if (x.changed)
+      for (const x of [...r.plan.rows, ...r.plan.scoreRows, ...r.plan.origRows]) if (x.changed)
         await g(`https://www.googleapis.com/drive/v3/files/${x.item.f.id}?supportsAllDrives=true`, {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name: x.nw + '.pdf'})});
       if (r.regen) { log(`${r.b.name}: rigenero «Parti»…`); await regen(r); }
-      const fresh = await scan(r.b); r.items = fresh.items; r.apply = false; r.regen = false; r.force = {}; r.custom = {}; Object.keys(r.mark).forEach(id => { if (r.mark[id] === 'score') delete r.mark[id]; }); replan(r);
+      const fresh = await scan(r.b); r.items = fresh.items; r.apply = false; r.regen = false; r.force = {}; r.custom = {}; Object.keys(r.mark).forEach(id => { if (r.mark[id] === 'score' || r.mark[id] === 'orig') delete r.mark[id]; }); replan(r);
       log(`✓ ${r.b.name}`);
     }
     log('Fatto. I brani sistemati risultano ora a posto; quelli con file segnati come originali o ignorati restano nell’elenco finché non li correggi dal Drive.');
@@ -374,7 +394,7 @@ async function renameBrano(b, list) {
   if (list.some(x => x.k === b.k && x.id !== b.id && x.name.toLowerCase() === nn.toLowerCase())) { alert('Esiste già un brano con questo nome in «' + LBL[b.k] + '».'); return false; }
   const q = `'${b.id}' in parents and trashed=false`;
   const r = await g(`${API}&pageSize=200&orderBy=name&fields=files(id,name)&q=${encodeURIComponent(q)}`);
-  const re = /^(.*?)( - (?:\d+\s|parti(?:\.pdf)?$|partitura(?:\.pdf)?$))/i;
+  const re = /^(.*?)( - (?:\d+\s|parti(?:\.pdf)?$|partitura(?:\.pdf)?$|originale(?:\.pdf)?$))/i;
   const files = r.files.map(f => { const m = f.name.match(re); return {f, nw: m ? nn + f.name.slice(m[1].length) : null}; }).filter(x => x.nw && x.nw !== x.f.name);
   const sample = files.slice(0, 6).map(x => `${x.f.name} → ${x.nw}`).join('\n') + (files.length > 6 ? `\n… e altri ${files.length - 6}` : '');
   if (!confirm(`Rinomino la cartella e ${files.length} file.\n\nCartella: ${b.name} → ${nn}\n${sample}\n\nProcedo?`)) return false;

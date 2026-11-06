@@ -23,6 +23,9 @@
     ['sax alto', 'sax contralto'], ['alto sax', 'sax contralto'], ['tenor sax', 'sax tenore'], ['ten sax', 'sax tenore'],
     ['sax bar', 'sax baritono'], ['sax baritone', 'sax baritono'], ['bar sax', 'sax baritono'],
     ['euphonium', 'eufonio'], ['trumpet', 'tromba'], ['horn', 'corno'], ['basses', 'tuba'], ['bass', 'tuba'],
+    ['stringbass', 'contrabbasso'], ['string bass', 'contrabbasso'], ['srtingbass', 'contrabbasso'],
+    ['percussion', 'percussioni'], ['percussions', 'percussioni'], ['perc', 'percussioni'],
+    ['flugelhorn', 'flicorno'], ['flughelhorn', 'flicorno'], ['fluegelhorn', 'flicorno'],
     ['bass trombone', 'trombone basso'], ['baritone sax', 'sax baritono'], ['french horn', 'corno'], ['english horn', 'corno inglese'], ['bassoon', 'fagotto'],
     ['fa', 'f'], ['mib', 'eb'], ['sib', 'bb']
   ];
@@ -56,7 +59,11 @@
     const gen = L.indexOf('Percussioni'), fb = gen >= 0 ? gen : 9999;
     const rest = norm(String(name).replace(/^percussioni\s*[-–:]?\s*/i, ''));
     if (!rest) return fb;
-    if (/^\d+$/.test(rest)) { const i = L.findIndex(x => norm(x) === 'percussioni ' + rest); return i >= 0 ? i : fb; }
+    if (/^\d+(?: (?:e )?\d+)*$/.test(rest)) { // "Percussioni 2", "Percussioni 1 e 2": prima la voce uguale, poi quella del primo numero
+      let i = L.findIndex(x => norm(x) === 'percussioni ' + rest);
+      if (i < 0) i = L.findIndex(x => norm(x) === 'percussioni ' + rest.split(' ')[0]);
+      return i >= 0 ? i : fb;
+    }
     for (let i = 0; i < L.length; i++) {
       const m = L[i].match(/^percussioni\s*-\s*(.+)$/i); if (!m) continue;
       const g = norm(m[1]), words = [g, ...(KW[g] || (KW0[g] || [])).map(norm)];
