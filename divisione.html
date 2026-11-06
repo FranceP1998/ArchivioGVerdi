@@ -228,7 +228,6 @@ function plan() {
     .sort((x, y) => x.k - y.k || x.i - y.i).map((r, j) => ({...r, file: `${t} - ${pad(j + 1)} ${r.n}`}));
   const sc = ok.find(r => r.n === 'Partitura');
   const all = [...parts];
-  if (parts.length) all.push({n: 'Parti', file: `${t} - Parti`, merged: 1});
   if (sc) all.push({...sc, file: `${t} - Partitura`});
   return {parts, sc, all};
 }
@@ -417,14 +416,10 @@ $('#go').onclick = async () => {
       body: JSON.stringify({name: t, mimeType: 'application/vnd.google-apps.folder', parents: [parent]})
     });
     log('Cartella creata');
-    const docs = [];
     for (const r of p.parts) {
-      const d = await cut(r.a, r.b); docs.push(d);
+      const d = await cut(r.a, r.b);
       await up(r.file + '.pdf', await d.save(), folder.id); log('✓ ' + r.file);
     }
-    const m = await PDFLib.PDFDocument.create();
-    for (const d of docs) (await m.copyPages(d, d.getPageIndices())).forEach(x => m.addPage(x));
-    await up(`${t} - Parti.pdf`, await m.save(), folder.id); log(`✓ ${t} - Parti`);
     if (p.sc) { await up(`${t} - Partitura.pdf`, await (await cut(p.sc.a, p.sc.b)).save(), folder.id); log(`✓ ${t} - Partitura`); }
     log('Fatto.');
   } catch (e) { log('Errore: ' + e.message); }

@@ -70,7 +70,7 @@ pre{white-space:pre-wrap;margin:.75rem 0 0}
 <main>
   <section>
     <h2>1. Analisi</h2>
-    <p>Per ogni brano il sito legge i nomi dei PDF, li riconosce, li mette nell’ordine classico e prepara i nuovi nomi, e segnala i brani senza il file «Parti». Non cambia nulla finché non lo confermi.</p>
+    <p>Per ogni brano il sito legge i nomi dei PDF, li riconosce, li mette nell’ordine classico e prepara i nuovi nomi. Non cambia nulla finché non lo confermi.</p>
     <div class="bar">
       <label><input type="checkbox" class="ck" value="concerto" checked> Brani da concerto</label>
       <label><input type="checkbox" class="ck" value="marce" checked> Marce</label>
@@ -84,6 +84,7 @@ pre{white-space:pre-wrap;margin:.75rem 0 0}
     <p id="sum" class="mono">Nessuna analisi ancora.</p>
     <div id="list"></div>
     <div id="okl"></div>
+    <div id="cln"></div>
     <p><button id="ap" class="main" disabled>Applica le modifiche selezionate</button></p>
     <pre id="log"></pre>
   </section>
@@ -268,11 +269,9 @@ function replan(r) {
   const marked = all.filter(i => r.mark[i.f.id]);
   const scoreRows = marked.filter(i => r.mark[i.f.id] === 'score').map(i => { const was = base(i), nw = `${r.b.name} - Partitura`; return {item: i, was, nw, changed: was !== nw}; });
   const origRows = marked.filter(i => r.mark[i.f.id] === 'orig').map(i => { const was = base(i), nw = was + ' - Originale'; return {item: i, was, nw, changed: true}; });
-  const noParti = !r.items.some(i => i.kind === 'parti');
-  r.plan = {rows, unknown, marked, scoreRows, origRows, noParti, orderChanged: rows.map(x => x.item.f.id).join() !== oldIds};
-  r.ok = !unknown.length && !marked.length && !noParti && !rows.some(x => x.changed);
+  r.plan = {rows, unknown, marked, scoreRows, origRows, orderChanged: rows.map(x => x.item.f.id).join() !== oldIds};
+  r.ok = !unknown.length && !marked.length && !rows.some(x => x.changed);
   if (r.apply === undefined) r.apply = false;
-  if (r.regen === undefined) r.regen = false;
 }
 $('#an').onclick = async () => {
   $('#an').disabled = true; res = []; alias = {}; $('#log').textContent = '';
@@ -299,17 +298,16 @@ function render() {
   $('#sum').textContent = `${res.length} brani analizzati: ${res.length - todo.length} a posto, ${todo.length} da sistemare` + (blocked ? `, di cui ${blocked} con file da assegnare` : '') + '.';
   $('#list').innerHTML = todo.map(r => {
     const i = res.indexOf(r), p = r.plan, ch = [...p.rows, ...p.scoreRows, ...p.origRows].filter(x => x.changed);
-    return `<details data-i="${i}" ${r.open ? 'open' : ''}><summary><span class="sn"><b>${esc(r.b.name)}</b><small>${LBL[r.b.k]}${ch.length ? ' · ' + ch.length + ' da rinominare' : ''}${p.unknown.length ? ' · ' + p.unknown.length + ' da assegnare' : ''}${p.noParti ? ' · manca «Parti»' : ''}${p.marked.length ? ' · ' + p.marked.length + ' segnati' : ''}</small></span><button type="button" class="rnb" data-i="${i}">Rinomina</button></summary>
+    return `<details data-i="${i}" ${r.open ? 'open' : ''}><summary><span class="sn"><b>${esc(r.b.name)}</b><small>${LBL[r.b.k]}${ch.length ? ' · ' + ch.length + ' da rinominare' : ''}${p.unknown.length ? ' · ' + p.unknown.length + ' da assegnare' : ''}${p.marked.length ? ' · ' + p.marked.length + ' segnati' : ''}</small></span><button type="button" class="rnb" data-i="${i}">Rinomina</button></summary>
       ${p.unknown.map(u => unknownHtml(r, i, u)).join('')}
       ${p.marked.map(it => `<p class="u mk"><span>«${esc(it.f.name)}» → ${MK[r.mark[it.f.id]]}${r.mark[it.f.id] === 'score' ? ' (diventa «' + esc(r.b.name) + ' - Partitura»)' : r.mark[it.f.id] === 'orig' ? ' (diventa «' + esc(it.f.name.replace(/\.pdf$/i, '')) + ' - Originale»)' : ''}</span><button type="button" class="un" data-i="${i}" data-f="${it.f.id}" data-t="mark" aria-label="Rimetti tra quelle da assegnare">✕</button></p>`).join('')}
       ${p.rows.some(x => x.changed) ? `<ol>${p.rows.filter(x => x.changed).map(x => `<li><span>${esc(x.was)}</span><span>→</span><span>${esc(x.nw)}</span><button type="button" class="un" data-i="${i}" data-f="${x.item.f.id}" data-t="row" aria-label="Rimetti tra quelle da assegnare">✕</button></li>`).join('')}</ol>` : ''}
-      ${p.noParti ? '<p class="u warn">Manca il file «Parti»: spunta qui sotto per crearlo.</p>' : ''}
-      <label class="inc"><input type="checkbox" class="cb" data-w="ap" data-i="${i}" ${r.apply ? 'checked' : ''} ${p.unknown.length ? 'disabled' : ''}> Applica a questo brano</label>
-      <label class="inc"><input type="checkbox" class="cb" data-w="rg" data-i="${i}" ${r.regen ? 'checked' : ''}> ${p.noParti ? 'Crea il file «Parti» (manca)' : 'Rigenera il file «Parti» con il nuovo ordine'}</label></details>`;
+      <label class="inc"><input type="checkbox" class="cb" data-w="ap" data-i="${i}" ${r.apply ? 'checked' : ''} ${p.unknown.length ? 'disabled' : ''}> Applica a questo brano</label></details>`;
   }).join('');
   const okl = res.filter(r => r.ok);
   $('#okl').innerHTML = okl.length ? `<details id="okd" ${okOpen ? 'open' : ''}><summary><span class="sn">Brani già a posto (${okl.length})</span></summary>${okl.map(r => `<div class="okr"><span class="sn">${esc(r.b.name)} <small>${LBL[r.b.k]}</small></span><button type="button" class="rnb" data-i="${res.indexOf(r)}">Rinomina</button></div>`).join('')}</details>` : '';
   $('#ap').disabled = !res.some(r => !r.ok && r.apply && !r.plan.unknown.length);
+  renderClean();
 }
 $('#list').addEventListener('change', e => {
   const t = e.target;
@@ -321,7 +319,7 @@ $('#list').addEventListener('change', e => {
     res.forEach(replan); render();
   } else if (t.classList.contains('cb')) {
     const r = res[+t.dataset.i];
-    if (t.dataset.w === 'ap') r.apply = t.checked; else r.regen = t.checked;
+    r.apply = t.checked;
     render();
   }
 });
@@ -355,20 +353,32 @@ $('#list').addEventListener('click', async e => {
 $('#list').addEventListener('toggle', e => { const d = e.target; if (d.dataset && d.dataset.i) res[+d.dataset.i].open = d.open; }, true);
 $('#okl').addEventListener('toggle', e => { okOpen = e.target.open; }, true);
 
-// ---- Applicazione ----
-async function regen(r) {
-  const out = await PDFLib.PDFDocument.create();
-  for (const x of r.plan.rows) {
-    const d = await PDFLib.PDFDocument.load(await gb(`https://www.googleapis.com/drive/v3/files/${x.item.f.id}?alt=media&supportsAllDrives=true`), {ignoreEncryption: true});
-    (await out.copyPages(d, d.getPageIndices())).forEach(p => out.addPage(p));
-  }
-  const bytes = await out.save(), pf = r.items.find(i => i.kind === 'parti');
-  if (pf) return g(`https://www.googleapis.com/upload/drive/v3/files/${pf.f.id}?uploadType=media&supportsAllDrives=true`, {method: 'PATCH', headers: {'Content-Type': 'application/pdf'}, body: bytes});
-  const f = new FormData();
-  f.append('metadata', new Blob([JSON.stringify({name: `${r.b.name} - Parti.pdf`, parents: [r.b.id]})], {type: 'application/json'}));
-  f.append('file', new Blob([bytes], {type: 'application/pdf'}));
-  return g('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true', {method: 'POST', body: f});
+// ---- Pulizia: il file «Parti» non serve più ----
+let cleanOpen = false;
+const partiItems = () => res.flatMap(r => r.items.filter(i => i.kind === 'parti').map(i => ({r, i})));
+function renderClean() {
+  const list = partiItems(), nb = new Set(list.map(x => x.r.b.id)).size;
+  $('#cln').innerHTML = list.length ? `<details id="cld" ${cleanOpen ? 'open' : ''}><summary><span class="sn"><b>File «Parti» da togliere</b><small>${list.length} file in ${nb} brani</small></span></summary>
+    <p>Il file «Parti» non serve più. Il pulsante li mette nel <b>cestino</b> del Drive, in tutti i brani analizzati qui sopra: si possono recuperare dal cestino finché non lo svuoti.</p>
+    <p><button type="button" id="clbtn" class="main">Metti nel cestino i ${list.length} file «Parti»</button> <span id="clmsg" class="mono"></span></p></details>` : '';
 }
+$('#cln').addEventListener('toggle', e => { cleanOpen = e.target.open; }, true);
+$('#cln').addEventListener('click', async e => {
+  if (e.target.id !== 'clbtn') return;
+  const list = partiItems(); if (!list.length) return;
+  if (!confirm(`Metto nel cestino ${list.length} file «Parti» in ${new Set(list.map(x => x.r.b.id)).size} brani?\n\nSi possono recuperare dal cestino del Drive.`)) return;
+  e.target.disabled = true; let n = 0;
+  try {
+    for (const {r, i} of list) {
+      await g(`https://www.googleapis.com/drive/v3/files/${i.f.id}?supportsAllDrives=true`, {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({trashed: true})});
+      r.items = r.items.filter(x => x !== i); n++; $('#clmsg').textContent = n + ' di ' + list.length + '…';
+    }
+    $('#log').textContent = `Messi nel cestino ${n} file «Parti».`;
+  } catch (err) { alert('Errore dopo ' + n + ' file: ' + err.message); }
+  res.forEach(replan); render();
+});
+
+// ---- Applicazione ----
 $('#ap').onclick = async () => {
   const log = m => { $('#log').textContent += m + '\n'; }, sel = res.filter(r => !r.ok && r.apply && !r.plan.unknown.length);
   $('#ap').disabled = true; $('#log').textContent = '';
@@ -377,8 +387,7 @@ $('#ap').onclick = async () => {
       log(`${r.b.name}: rinomino…`);
       for (const x of [...r.plan.rows, ...r.plan.scoreRows, ...r.plan.origRows]) if (x.changed)
         await g(`https://www.googleapis.com/drive/v3/files/${x.item.f.id}?supportsAllDrives=true`, {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name: x.nw + '.pdf'})});
-      if (r.regen) { log(`${r.b.name}: rigenero «Parti»…`); await regen(r); }
-      const fresh = await scan(r.b); r.items = fresh.items; r.apply = false; r.regen = false; r.force = {}; r.custom = {}; Object.keys(r.mark).forEach(id => { if (r.mark[id] === 'score' || r.mark[id] === 'orig') delete r.mark[id]; }); replan(r);
+      const fresh = await scan(r.b); r.items = fresh.items; r.apply = false; r.force = {}; r.custom = {}; Object.keys(r.mark).forEach(id => { if (r.mark[id] === 'score' || r.mark[id] === 'orig') delete r.mark[id]; }); replan(r);
       log(`✓ ${r.b.name}`);
     }
     log('Fatto. I brani sistemati risultano ora a posto; quelli con file segnati come originali o ignorati restano nell’elenco finché non li correggi dal Drive.');
