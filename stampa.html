@@ -61,7 +61,7 @@ li label{font-weight:400;color:var(--ink)}
 <body>
 <header>
   <a href="https://www.corpomusicalegverdi.it/"><img class="logo" src="https://www.corpomusicalegverdi.it/wp-content/uploads/2026/01/Marchio-Ufficiale-Orizzontale.svg" alt="Corpo Musicale “G. Verdi” di Venaria Reale"></a>
-  <nav class="nav"><a href="archivio.html">Archivio</a><a href="stampa.html" aria-current="page">Stampa</a><a href="cartellina.html">Cartellina</a><a href="divisione.html">Divisione PDF</a></nav>
+  <nav class="nav"><a href="archivio.html">Archivio</a><a href="stampa.html" aria-current="page">Stampa</a><a href="cartellina.html">Cartellina</a><a href="organico.html">Organico</a><a href="divisione.html">Divisione PDF</a></nav>
   <div class="acc"><span id="st">Non connesso</span><button id="login">Accedi con Google</button></div>
 </header>
 <div class="band"><h1>Stampa</h1><p>Le copie giuste per ogni strumento, secondo l’organico</p></div>
@@ -173,10 +173,11 @@ async function parentId() {
   if (!parent) parent = (await g(`https://www.googleapis.com/drive/v3/files/${CFG.FOLDERS.concerto}?fields=parents&supportsAllDrives=true`)).parents[0];
   return parent;
 }
+async function backup(name) { try { const x = await fetch('dati/' + name); if (x.ok) return await x.json(); } catch (e) {} return null; }
 async function loadCfg(name) {
   const q = `'${await parentId()}' in parents and name='${name}' and trashed=false`;
   const r = await g(`${API}&fields=files(id)&q=${encodeURIComponent(q)}`);
-  if (!r.files.length) return null;
+  if (!r.files.length) return backup(name);
   CF[name] = r.files[0].id;
   return g(`https://www.googleapis.com/drive/v3/files/${CF[name]}?alt=media&supportsAllDrives=true`);
 }
