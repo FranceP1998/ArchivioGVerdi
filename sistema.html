@@ -19,7 +19,17 @@ header{display:flex;justify-content:space-between;align-items:center;gap:1rem;fl
 #st.on{background:var(--green);color:#fff}
 .band{background:var(--navy);padding:2rem clamp(1rem,4vw,3rem) 2.25rem}
 .band p{margin:.4rem 0 0;color:var(--cream);font-size:1.1rem}
-main{padding:1.5rem clamp(1rem,4vw,3rem) 3rem;max-width:64rem}
+main{padding:1.5rem clamp(1rem,4vw,3rem) 3rem;max-width:86rem}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 21rem;gap:1.25rem;align-items:start}
+.side{position:sticky;top:1rem;max-height:calc(100vh - 2rem);overflow:auto;background:#fff;border-radius:12px;border-top:6px solid var(--wine);padding:1.1rem}
+.side h2{font-size:1.25rem;margin-bottom:.25rem}
+.side h3{font-family:Piazzolla,serif;font-size:1rem;color:var(--navy);margin:.9rem 0 .2rem}
+.side ul{list-style:none;margin:0;padding:0}
+.side li{display:block;padding:.15rem 0;border-top:1px solid var(--sage)}
+.side .lk{background:none;border:0;padding:.2rem 0;font-weight:400;font-size:.95rem;color:var(--navy);text-align:left;cursor:pointer;border-radius:0}
+.side .lk:hover{text-decoration:underline;background:none}
+.side .cp{margin-top:.75rem;padding:.25rem .9rem;font-size:.9rem}
+@media(max-width:1000px){.layout{grid-template-columns:1fr}.side{position:static;max-height:none}}
 section{background:#fff;border-radius:12px;padding:1.25rem;margin-bottom:1.25rem}
 select,button{font:inherit;color:inherit}
 select{padding:.4rem .5rem;border:1px solid var(--navy);border-radius:6px;background:#fff;max-width:100%}
@@ -68,6 +78,7 @@ pre{white-space:pre-wrap;margin:.75rem 0 0}
 <div class="band"><h1>Controllo archivio</h1><p>Controlla, riordina e rinomina le parti dei brani già divisi</p></div>
 
 <main>
+<div class="layout"><div class="mainc">
   <section>
     <h2>1. Analisi</h2>
     <p>Per ogni brano il sito legge i nomi dei PDF, li riconosce, li mette nell’ordine classico e prepara i nuovi nomi. Non cambia nulla finché non lo confermi.</p>
@@ -88,11 +99,14 @@ pre{white-space:pre-wrap;margin:.75rem 0 0}
     <p><button id="ap" class="main" disabled>Applica le modifiche selezionate</button></p>
     <pre id="log"></pre>
   </section>
+</div>
+<aside class="side" id="side" aria-label="Partiture mancanti"><h2>Partiture mancanti</h2><div id="sidebody"><p class="mono">Premi «Analizza» per vedere l’elenco.</p></div></aside>
+</div>
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="regole.js?v=9"></script>
+<script src="regole.js?v=12"></script>
 <script>
 const CFG = {
   CLIENT_ID: '461215269916-tcd8cfsa5m951ohohibf4f8635tdgolp.apps.googleusercontent.com',
@@ -232,14 +246,11 @@ async function scan(b) {
   const q = `'${b.id}' in parents and trashed=false`;
   const r = await g(`${API}&pageSize=200&orderBy=name&fields=files(id,name,mimeType)&q=${encodeURIComponent(q)}`);
   const items = r.files.filter(f => /pdf/i.test(f.mimeType) || /\.pdf$/i.test(f.name)).map(f => {
-    const n = f.name.replace(/\.pdf$/i, '').trim();
-    if (/(^|[\s_–-])parti$/i.test(n)) return {f, kind: 'parti'};
-    if (/(^|[\s_–-])originale$/i.test(n)) return {f, kind: 'orig'};
-    if (/(^|[\s_–-])(?:partitura|conductor(?:[\s_-]+score)?|(?:full[\s_-]+)?score)$/i.test(n)) return {f, kind: 'score'};
-    const m = n.match(/^(?:.*? - )?(\d+)\s*[-–.)]*\s*(.+)$/);
-    const sans = n.replace(new RegExp('^' + b.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[\\s_–-]*', 'i'), '').trim(); // via il titolo, con o senza trattino
-    const alt = !m && sans === n && n.includes(' - ') ? n.slice(n.indexOf(' - ') + 3).trim() : null; // titolo diverso da quello della cartella
-    return {f, kind: 'part', raw: m ? m[2].trim() : sans, alt, full: sans, num: m ? +m[1] : null};
+    const n = f.name.replace(/\.pdf$/i, '').trim(), {x, fmt} = Regole.stripTitle(n, b.name), kind = Regole.kindOf(x);
+    if (kind) return {f, kind};
+    const m = x.match(/^(\d+)\s*[-–.)]*\s*(.+)$/);
+    const alt = !m && !fmt && n.includes(' - ') ? n.slice(n.indexOf(' - ') + 3).trim() : null; // titolo diverso da quello della cartella
+    return {f, kind: 'part', raw: m ? m[2].trim() : x, alt, full: x, num: m ? +m[1] : null};
   });
   return {b, items};
 }
@@ -263,14 +274,18 @@ function replan(r) {
   const n9 = p => p.i.num == null ? 999 : p.i.num;
   const oldIds = [...parts].sort((a, b) => n9(a) - n9(b) || a.pos - b.pos).map(p => p.i.f.id).join();
   const rows = parts.filter(p => p.c).sort((a, b) => ord(a.c) - ord(b.c) || n9(a) - n9(b) || a.pos - b.pos).map((p, n) => {
-    const was = base(p.i), nw = `${r.b.name} - ${pad(n + 1)} ${p.c}`;
+    const was = base(p.i), nw = `${pad(n + 1)} ${p.c} - ${r.b.name}`;
     return {item: p.i, was, nw, changed: was !== nw};
   });
   const marked = all.filter(i => r.mark[i.f.id]);
-  const scoreRows = marked.filter(i => r.mark[i.f.id] === 'score').map(i => { const was = base(i), nw = `${r.b.name} - Partitura`; return {item: i, was, nw, changed: was !== nw}; });
-  const origRows = marked.filter(i => r.mark[i.f.id] === 'orig').map(i => { const was = base(i), nw = was + ' - Originale'; return {item: i, was, nw, changed: true}; });
-  r.plan = {rows, unknown, marked, scoreRows, origRows, orderChanged: rows.map(x => x.item.f.id).join() !== oldIds};
-  r.ok = !unknown.length && !marked.length && !rows.some(x => x.changed);
+  // partitura e originale: anche quelli già riconosciuti vanno portati al formato nuovo ("Partitura - Titolo", "Originale - Titolo")
+  const sc = [...r.items.filter(i => i.kind === 'score'), ...marked.filter(i => r.mark[i.f.id] === 'score')];
+  const og = [...r.items.filter(i => i.kind === 'orig'), ...marked.filter(i => r.mark[i.f.id] === 'orig')];
+  const scoreRows = sc.map(i => { const was = base(i), nw = `Partitura - ${r.b.name}`; return {item: i, was, nw, changed: was !== nw}; });
+  const origRows = og.map(i => { const was = base(i), nw = /^originale\s*[-–_]/i.test(was) ? was : 'Originale - ' + was.replace(/\s*[-–_]\s*originale$/i, ''); return {item: i, was, nw, changed: was !== nw}; });
+  const fixRows = [...scoreRows, ...origRows].filter(x => x.changed && !r.mark[x.item.f.id]);
+  r.plan = {rows, unknown, marked, scoreRows, origRows, fixRows, orderChanged: rows.map(x => x.item.f.id).join() !== oldIds};
+  r.ok = !unknown.length && !marked.length && !rows.some(x => x.changed) && !scoreRows.some(x => x.changed) && !origRows.some(x => x.changed);
   if (r.apply === undefined) r.apply = false;
 }
 $('#an').onclick = async () => {
@@ -291,23 +306,24 @@ const MK = {orig: 'Originale', score: 'Partitura', skip: 'Ignorato per ora'};
 const pfill = raw => /^percussion/i.test(raw) ? raw.replace(/^percussion\w*\s*[-–:]?\s*/i, '').trim() : '';
 function unknownHtml(r, i, u) {
   const gs = guess(u.raw), k = esc(key(u.raw)), hasScore = r.items.some(x => x.kind === 'score'), d = `data-i="${i}" data-f="${u.f.id}" data-k="${k}"`;
-  return `<p class="u"><span class="warn">«${esc(u.f.name)}» non assegnato</span><br>Assegna a: <select class="sl" ${d}><option value="">Scegli…</option>${gs ? `<option value="${esc(gs)}">Suggerito: ${esc(gs)}</option>` : ''}<option value="@orig">Originale (aggiunge « - Originale» al nome)</option>${hasScore ? '' : '<option value="@score">Partitura</option>'}<option value="@skip">Ignora per ora</option>${L.map(x => `<option>${esc(x)}</option>`).join('')}</select><br>Oppure è una percussione: «Percussioni - » <input class="pn" value="${esc(pfill(u.raw))}" placeholder="nome, per esempio Triangolo" aria-label="Nome della percussione"> <button type="button" class="perc" ${d}>Assegna come percussione</button><br>Oppure aggiungi un nuovo strumento: <input class="nn" value="${esc(u.raw)}" aria-label="Nome del nuovo strumento"> dopo <select class="np" aria-label="Posizione nell’ordine">${L.map(x => `<option${x === 'Pianoforte' ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select> <button type="button" class="add" ${d}>Aggiungi e assegna</button></p>`;
+  return `<p class="u"><span class="warn">«${esc(u.f.name)}» non assegnato</span><br>Assegna a: <select class="sl" ${d}><option value="">Scegli…</option>${gs ? `<option value="${esc(gs)}">Suggerito: ${esc(gs)}</option>` : ''}<option value="@orig">Originale (aggiunge «Originale - » al nome)</option>${hasScore ? '' : '<option value="@score">Partitura</option>'}<option value="@skip">Ignora per ora</option>${L.map(x => `<option>${esc(x)}</option>`).join('')}</select><br>Oppure è una percussione: «Percussioni - » <input class="pn" value="${esc(pfill(u.raw))}" placeholder="nome, per esempio Triangolo" aria-label="Nome della percussione"> <button type="button" class="perc" ${d}>Assegna come percussione</button><br>Oppure aggiungi un nuovo strumento: <input class="nn" value="${esc(u.raw)}" aria-label="Nome del nuovo strumento"> dopo <select class="np" aria-label="Posizione nell’ordine">${L.map(x => `<option${x === 'Pianoforte' ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select> <button type="button" class="add" ${d}>Aggiungi e assegna</button></p>`;
 }
 function render() {
   const todo = res.filter(r => !r.ok), blocked = todo.filter(r => r.plan.unknown.length).length;
   $('#sum').textContent = `${res.length} brani analizzati: ${res.length - todo.length} a posto, ${todo.length} da sistemare` + (blocked ? `, di cui ${blocked} con file da assegnare` : '') + '.';
   $('#list').innerHTML = todo.map(r => {
     const i = res.indexOf(r), p = r.plan, ch = [...p.rows, ...p.scoreRows, ...p.origRows].filter(x => x.changed);
-    return `<details data-i="${i}" ${r.open ? 'open' : ''}><summary><span class="sn"><b>${esc(r.b.name)}</b><small>${LBL[r.b.k]}${ch.length ? ' · ' + ch.length + ' da rinominare' : ''}${p.unknown.length ? ' · ' + p.unknown.length + ' da assegnare' : ''}${p.marked.length ? ' · ' + p.marked.length + ' segnati' : ''}</small></span><button type="button" class="rnb" data-i="${i}">Rinomina</button></summary>
+    return `<details id="b-${i}" data-i="${i}" ${r.open ? 'open' : ''}><summary><span class="sn"><b>${esc(r.b.name)}</b><small>${LBL[r.b.k]}${ch.length ? ' · ' + ch.length + ' da rinominare' : ''}${p.unknown.length ? ' · ' + p.unknown.length + ' da assegnare' : ''}${p.marked.length ? ' · ' + p.marked.length + ' segnati' : ''}</small></span><button type="button" class="rnb" data-i="${i}">Rinomina</button></summary>
       ${p.unknown.map(u => unknownHtml(r, i, u)).join('')}
-      ${p.marked.map(it => `<p class="u mk"><span>«${esc(it.f.name)}» → ${MK[r.mark[it.f.id]]}${r.mark[it.f.id] === 'score' ? ' (diventa «' + esc(r.b.name) + ' - Partitura»)' : r.mark[it.f.id] === 'orig' ? ' (diventa «' + esc(it.f.name.replace(/\.pdf$/i, '')) + ' - Originale»)' : ''}</span><button type="button" class="un" data-i="${i}" data-f="${it.f.id}" data-t="mark" aria-label="Rimetti tra quelle da assegnare">✕</button></p>`).join('')}
-      ${p.rows.some(x => x.changed) ? `<ol>${p.rows.filter(x => x.changed).map(x => `<li><span>${esc(x.was)}</span><span>→</span><span>${esc(x.nw)}</span><button type="button" class="un" data-i="${i}" data-f="${x.item.f.id}" data-t="row" aria-label="Rimetti tra quelle da assegnare">✕</button></li>`).join('')}</ol>` : ''}
+      ${p.marked.map(it => `<p class="u mk"><span>«${esc(it.f.name)}» → ${MK[r.mark[it.f.id]]}${r.mark[it.f.id] === 'score' ? ' (diventa «Partitura - ' + esc(r.b.name) + '»)' : r.mark[it.f.id] === 'orig' ? ' (diventa «Originale - ' + esc(it.f.name.replace(/\.pdf$/i, '')) + '»)' : ''}</span><button type="button" class="un" data-i="${i}" data-f="${it.f.id}" data-t="mark" aria-label="Rimetti tra quelle da assegnare">✕</button></p>`).join('')}
+      ${(p.rows.some(x => x.changed) || p.fixRows.length) ? `<ol>${p.rows.filter(x => x.changed).map(x => `<li><span>${esc(x.was)}</span><span>→</span><span>${esc(x.nw)}</span><button type="button" class="un" data-i="${i}" data-f="${x.item.f.id}" data-t="row" aria-label="Rimetti tra quelle da assegnare">✕</button></li>`).join('')}${p.fixRows.map(x => `<li><span>${esc(x.was)}</span><span>→</span><span>${esc(x.nw)}</span><span></span></li>`).join('')}</ol>` : ''}
       <label class="inc"><input type="checkbox" class="cb" data-w="ap" data-i="${i}" ${r.apply ? 'checked' : ''} ${p.unknown.length ? 'disabled' : ''}> Applica a questo brano</label></details>`;
   }).join('');
   const okl = res.filter(r => r.ok);
-  $('#okl').innerHTML = okl.length ? `<details id="okd" ${okOpen ? 'open' : ''}><summary><span class="sn">Brani già a posto (${okl.length})</span></summary>${okl.map(r => `<div class="okr"><span class="sn">${esc(r.b.name)} <small>${LBL[r.b.k]}</small></span><button type="button" class="rnb" data-i="${res.indexOf(r)}">Rinomina</button></div>`).join('')}</details>` : '';
+  $('#okl').innerHTML = okl.length ? `<details id="okd" ${okOpen ? 'open' : ''}><summary><span class="sn">Brani già a posto (${okl.length})</span></summary>${okl.map(r => `<div class="okr" id="b-${res.indexOf(r)}"><span class="sn">${esc(r.b.name)} <small>${LBL[r.b.k]}</small></span><button type="button" class="rnb" data-i="${res.indexOf(r)}">Rinomina</button></div>`).join('')}</details>` : '';
   $('#ap').disabled = !res.some(r => !r.ok && r.apply && !r.plan.unknown.length);
   renderClean();
+  renderSide();
 }
 $('#list').addEventListener('change', e => {
   const t = e.target;
@@ -352,6 +368,32 @@ $('#list').addEventListener('click', async e => {
 });
 $('#list').addEventListener('toggle', e => { const d = e.target; if (d.dataset && d.dataset.i) res[+d.dataset.i].open = d.open; }, true);
 $('#okl').addEventListener('toggle', e => { okOpen = e.target.open; }, true);
+
+// ---- Pannello a destra: brani in cui manca la partitura ----
+const noScore = r => !r.items.some(i => i.kind === 'score') && !Object.values(r.mark || {}).includes('score');
+function renderSide() {
+  const box = $('#sidebody');
+  if (!res.length) { box.innerHTML = '<p class="mono">Premi «Analizza» per vedere l’elenco.</p>'; return; }
+  const miss = res.map((r, i) => ({r, i})).filter(x => noScore(x.r)).sort((a, b) => a.r.b.name.localeCompare(b.r.b.name, 'it'));
+  if (!miss.length) { box.innerHTML = `<p class="mono">Tutti i ${res.length} brani analizzati hanno la partitura.</p>`; return; }
+  box.innerHTML = `<p class="mono">${miss.length} brani su ${res.length} analizzati</p>` + Object.keys(LBL).map(k => {
+    const l = miss.filter(x => x.r.b.k === k); if (!l.length) return '';
+    return `<h3>${LBL[k]} (${l.length})</h3><ul>${l.map(x => `<li><button type="button" class="lk" data-i="${x.i}">${esc(x.r.b.name)}</button></li>`).join('')}</ul>`;
+  }).join('') + '<button type="button" class="cp" id="sidecopy">Copia l’elenco</button> <span id="sidemsg" class="mono"></span>';
+}
+$('#side').addEventListener('click', async e => {
+  const t = e.target.closest('button'); if (!t) return;
+  if (t.id === 'sidecopy') {
+    const txt = res.filter(noScore).map(r => r.b.name).sort((a, b) => a.localeCompare(b, 'it')).join('\n');
+    try { await navigator.clipboard.writeText(txt); $('#sidemsg').textContent = 'Copiato.'; } catch (err) { $('#sidemsg').textContent = 'Non riesco a copiare.'; }
+    return;
+  }
+  if (t.dataset.i === undefined) return;
+  const i = +t.dataset.i, r = res[i];
+  if (r.ok) okOpen = true; else r.open = true;
+  render();
+  const el = document.getElementById('b-' + i); if (el) el.scrollIntoView({block: 'center'});
+});
 
 // ---- Pulizia: il file «Parti» non serve più ----
 let cleanOpen = false;
@@ -403,8 +445,7 @@ async function renameBrano(b, list) {
   if (list.some(x => x.k === b.k && x.id !== b.id && x.name.toLowerCase() === nn.toLowerCase())) { alert('Esiste già un brano con questo nome in «' + LBL[b.k] + '».'); return false; }
   const q = `'${b.id}' in parents and trashed=false`;
   const r = await g(`${API}&pageSize=200&orderBy=name&fields=files(id,name)&q=${encodeURIComponent(q)}`);
-  const re = /^(.*?)( - (?:\d+\s|parti(?:\.pdf)?$|partitura(?:\.pdf)?$|originale(?:\.pdf)?$))/i;
-  const files = r.files.map(f => { const m = f.name.match(re); return {f, nw: m ? nn + f.name.slice(m[1].length) : null}; }).filter(x => x.nw && x.nw !== x.f.name);
+  const files = r.files.map(f => ({f, nw: Regole.retitle(f.name, b.name, nn)})).filter(x => x.nw && x.nw !== x.f.name);
   const sample = files.slice(0, 6).map(x => `${x.f.name} → ${x.nw}`).join('\n') + (files.length > 6 ? `\n… e altri ${files.length - 6}` : '');
   if (!confirm(`Rinomino la cartella e ${files.length} file.\n\nCartella: ${b.name} → ${nn}\n${sample}\n\nProcedo?`)) return false;
   const patch = (id, name) => g(`https://www.googleapis.com/drive/v3/files/${id}?supportsAllDrives=true`, {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name})});
@@ -422,7 +463,7 @@ document.querySelector('main').addEventListener('click', async e => {
 });
 
 </script>
-<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F2</p>
+<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F6</p>
 <script>document.getElementById('ver').textContent += ' · regole: ' + (window.Regole && Regole.build ? Regole.build : 'vecchie o non caricate');</script>
 </body>
 </html>
