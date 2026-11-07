@@ -112,7 +112,7 @@ li label{font-weight:400;color:var(--ink)}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="regole.js?v=9"></script>
+<script src="regole.js?v=12"></script>
 <script>
 const CFG = {
   CLIENT_ID: '461215269916-tcd8cfsa5m951ohohibf4f8635tdgolp.apps.googleusercontent.com',
@@ -233,14 +233,12 @@ async function pick(b) {
     const q = `'${b.id}' in parents and trashed=false`;
     const r = await g(`${API}&pageSize=200&orderBy=name&fields=files(id,name)&q=${encodeURIComponent(q)}`);
     if (my !== seq) return;
-    const pre = low(b.name + ' - ');
-    const fl = r.files.map(f => { let n = f.name.replace(/\.pdf$/i, '').trim(); if (low(n).startsWith(pre)) n = n.slice(pre.length).trim(); return {id: f.id, name: n}; });
-    const tail = /(^|\s-\s)(parti|partitura)$/i, sc = fl.find(p => /(^|\s-\s)partitura$/i.test(p.name));
+    const fl = r.files.map(f => ({id: f.id, fname: f.name, ...Regole.parseFile(f.name, b.name)}));
+    const sc = fl.find(p => p.kind === 'score');
     score = sc ? {id: sc.id, name: 'Partitura'} : null;
-    parts = fl.filter(p => !tail.test(p.name)).map(p => { const m = p.name.match(/^(?:.*? - )?(\d+)\s+(.+)$/); return m ? {id: p.id, num: +m[1], name: m[2].trim()} : null; })
-      .filter(Boolean).sort((a, c) => a.num - c.num);
+    parts = fl.filter(p => p.kind === 'part').map(p => ({id: p.id, num: p.num, name: p.name})).sort((a, c) => a.num - c.num);
     $('#sel').innerHTML = [...parts, ...(score ? [score] : [])].map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
-    $('#msg').textContent = b.name + ' (' + LBL[b.k] + '): ' + parts.length + ' parti trovate.' + (parts.length ? '' : fl.length ? ' Non riconosco i nomi dei file, ad esempio «' + fl[0].name + '».' : ' La cartella è vuota.');
+    $('#msg').textContent = b.name + ' (' + LBL[b.k] + '): ' + parts.length + ' parti trovate.' + (parts.length ? '' : fl.length ? ' Non riconosco i nomi dei file, ad esempio «' + fl[0].fname + '».' : ' La cartella è vuota.');
   } catch (e) { $('#msg').textContent = 'Errore: ' + e.message; }
   show();
 }
@@ -316,7 +314,7 @@ $('#go').onclick = async () => {
 };
 show();
 </script>
-<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F2</p>
+<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F6</p>
 <script>document.getElementById('ver').textContent += ' · regole: ' + (window.Regole && Regole.build ? Regole.build : 'vecchie o non caricate');</script>
 </body>
 </html>
