@@ -16,6 +16,46 @@
     eufonio: ['c bc', 'bb tc']
   };
 
+  // ---- Nomi dei file: formato "NN Strumento - Titolo" (si leggono anche i vecchi "Titolo - NN Strumento") ----
+  const escRe = s => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // Toglie il titolo del brano dal nome (in fondo nel formato nuovo, all'inizio nel vecchio)
+  function stripTitle(n, title) {
+    const t = escRe(String(title).trim());
+    let x = n.replace(new RegExp('\\s*[-–_]\\s*' + t + '$', 'i'), '');
+    if (x !== n) return {x: x.trim(), fmt: 'nuovo'};
+    x = n.replace(new RegExp('^' + t + '[\\s_–-]*', 'i'), '');
+    if (x !== n) return {x: x.trim(), fmt: 'vecchio'};
+    return {x: n, fmt: null};
+  }
+  // Partitura, originale o file Parti (anche scritti "Conductor", "Score", "Full Score")
+  function kindOf(x) {
+    const W = '(parti|originale|partitura|conductor(?:[\\s_-]+score)?|(?:full[\\s_-]+)?score)';
+    const m = x.match(new RegExp('^' + W + '(?:\\s*[-–_]\\s*.*)?$', 'i')) || x.match(new RegExp('(?:^|[\\s_–-])' + W + '$', 'i'));
+    if (!m) return null;
+    const w = m[1].toLowerCase();
+    return w === 'parti' ? 'parti' : w === 'originale' ? 'orig' : 'score';
+  }
+  // {kind: 'part'|'score'|'orig'|'parti'|'other', num, name}
+  function parseFile(fname, title) {
+    const n = fname.replace(/\.pdf$/i, '').trim(), {x, fmt} = stripTitle(n, title), k = kindOf(x);
+    if (k) return {kind: k};
+    let m;
+    if (!fmt) { // titolo diverso da quello della cartella
+      if ((m = n.match(/^(\d+)\s+(.+)\s+-\s+[^-–]+$/))) return {kind: 'part', num: +m[1], name: m[2].trim()};
+      if ((m = n.match(/^.*? - (\d+)\s+(.+)$/))) return {kind: 'part', num: +m[1], name: m[2].trim()};
+    }
+    if ((m = x.match(/^(\d+)\s*[-–.)]*\s*(.+)$/))) return {kind: 'part', num: +m[1], name: m[2].trim()};
+    return {kind: 'other'};
+  }
+  // Nuovo titolo in un nome di file (per "Rinomina brano"); null se il nome non ha il titolo al posto atteso
+  function retitle(fname, oldT, newT) {
+    const m = fname.match(/^(.*?)(\.pdf)?$/i), n = m[1], ext = m[2] || '', t = escRe(String(oldT).trim());
+    const suf = new RegExp('(\\s*[-–_]\\s*)' + t + '$', 'i'), pre = new RegExp('^' + t + '(?=\\s*[-–_])', 'i');
+    if (suf.test(n)) return n.replace(suf, (a, sep) => sep + newT) + ext;
+    if (pre.test(n)) return n.replace(pre, () => newT) + ext;
+    return null;
+  }
+
   // ---- Sinonimi: "Flute" -> "flauto", "Sib" -> "bb", ... (parole intere, vince la frase più lunga) ----
   const SYN0 = [
     ['flute', 'flauto'], ['piccolo', 'ottavino'], ['clarinet', 'clarinetto'], ['cl', 'clarinetto'],
@@ -84,24 +124,29 @@
   function parsePart(name) {
     let n = low(name), solo = false, ton = null, m;
     if (n.startsWith('percussioni')) return {base: 'percussioni', roles: [], ton, solo};
+    if ((m = n.match(/^(.*?)\s+in\s+mancanza(?:\s+(?:di|del|dello|della|dei|degli))?\s+(.+)$/))) return {...parsePart(m[1]), manc: parsePart(m[2]).base}; // "X in mancanza Y": suonata da X solo se Y non c'è in organico
     if (/\s+solo$/.test(n)) { solo = true; n = n.replace(/\s+solo$/, ''); }
     if ((m = n.match(/\s+in\s+((?:c|bb|eb|f)(?:\s+(?:bc|tc))?)$/))) { ton = m[1]; n = n.slice(0, m.index); }
-    if ((m = n.match(/^ottavino e flauto(?:\s+(\d+))?$/))) return {base: 'flauto', roles: m[1] ? [m[1]] : [], ton: null, solo, ott: true}; // vale anche per l'ottavino
+    if ((m = n.match(/^(ottavino|oboe) e flauto(?:\s+(\d+))?$/))) return {base: 'flauto', roles: m[2] ? [m[2]] : [], ton: null, solo, also: m[1]}; // "Ottavino e Flauto", "Oboe e Flauto 1": vale anche per l'altro strumento
     if (n === 'clarinetto' && ton === 'eb') return {base: 'clarinetto in eb', roles: [], ton: null, solo};
     if (n === 'clarinetto basso') return {base: n, roles: [], ton, solo};
     m = n.match(/^(.*?)\s+(\d+|basso)(?:\s+e\s+(?:\1\s+)?(\d+|basso))?$/);
     return m ? {base: m[1], roles: [m[2], m[3]].filter(Boolean), ton, solo} : {base: n, roles: [], ton, solo};
   }
   const parseOrg = t => String(t).split('\n').map(l => l.trim().match(/^(\d+)\s+(.+)$/)).filter(Boolean).map(m => ({n: +m[1], role: m[2].trim()}));
-  const build = parts => parts.map(p => ({p, ...parsePart(p.name)})).filter(x => !x.solo);
+  const build = parts => parts.map(p => ({p, ...parsePart(p.name)})).filter(x => !x.solo && !x.manc);
 
   // Copie di un ruolo dell'organico: restituisce [{part: nome in minuscolo, n}]
   function alloc(PP, role, n, pref) {
     let q = parsePart(role);
     if (q.base === 'ottavino' && !PP.some(x => x.base === 'ottavino')) {
-      const c = PP.find(x => x.ott); // parte "Ottavino e Flauto" (o "Ottavino e Flauto 1"): va anche all'ottavino
+      const c = PP.find(x => x.also === 'ottavino'); // parte "Ottavino e Flauto" (o "Ottavino e Flauto 1"): va anche all'ottavino
       if (c) return [{part: low(c.p.name), n}];
       q = {base: 'flauto', roles: ['1']};
+    }
+    if (q.base === 'oboe' && !PP.some(x => x.base === 'oboe')) {
+      const c = PP.find(x => x.also === 'oboe'); // parte "Oboe e Flauto" (o "Oboe e Flauto 1"): va anche agli oboe
+      if (c) return [{part: low(c.p.name), n}];
     }
     let b = q.base;
     if (b === 'tromba' && !PP.some(x => x.base === 'tromba') && PP.some(x => x.base === 'cornetta')) b = 'cornetta';
@@ -140,6 +185,14 @@
       const b = low(p.name).slice(0, -5), o = res.find(x => low(x.role) === b + ' 1') || res.find(x => low(x.role) === b);
       if (o) { if (o.al[0] && o.n > 1) o.al[0].n -= 1; extra[low(p.name)] = 1; }
     });
+    // Parti "X in mancanza Y": se Y è in organico si ignorano; altrimenti una copia va a un solo musicista di X
+    // (preso dal ruolo 1 se X è diviso, o dal ruolo generico se non lo è) e gli altri prendono le loro parti
+    parts.filter(p => parsePart(p.name).manc).forEach(p => {
+      const q = parsePart(p.name), a = low(p.name.split(/\s+in\s+mancanza/i)[0]);
+      if (org.some(o => o.n > 0 && parsePart(o.role).base === q.manc)) return;
+      const o = res.find(x => low(x.role) === a) || res.find(x => low(x.role) === a + ' 1');
+      if (o) { if (o.al[0] && o.n > 1) o.al[0].n -= 1; extra[low(p.name)] = 1; }
+    });
     res.forEach(o => o.al.forEach(a => { cnt[a.part] = (cnt[a.part] || 0) + a.n; }));
     Object.assign(cnt, extra);
     parts.filter(p => /^percussioni/i.test(p.name)).forEach(p => { cnt[low(p.name)] = 1; });
@@ -155,5 +208,5 @@
     return a ? parts.find(p => low(p.name) === a.part) : null;
   }
 
-  (typeof window !== 'undefined' ? window : globalThis).Regole = {build: 'F2', ORG0, KW0, SYN0, applySyn, setSynonyms, getSynonyms: () => SYN, parseOrg, parsePart, calc, partFor, percKey, ordKey, setKeywords, getKeywords: () => KW, norm};
+  (typeof window !== 'undefined' ? window : globalThis).Regole = {build: 'F6', stripTitle, kindOf, parseFile, retitle, ORG0, KW0, SYN0, applySyn, setSynonyms, getSynonyms: () => SYN, parseOrg, parsePart, calc, partFor, percKey, ordKey, setKeywords, getKeywords: () => KW, norm};
 })();
