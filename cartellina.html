@@ -73,7 +73,7 @@ a.dl{display:inline-block;margin-top:.75rem;font-weight:600;color:var(--navy)}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="regole.js?v=9"></script>
+<script src="regole.js?v=12"></script>
 <script>
 const CFG = {
   CLIENT_ID: '461215269916-tcd8cfsa5m951ohohibf4f8635tdgolp.apps.googleusercontent.com',
@@ -151,10 +151,7 @@ const lab = b => dup[low(b.name)] > 1 ? `${b.name} — ${LBL[b.k]}` : b.name;
 async function partsOf(b) {
   const q = `'${b.id}' in parents and trashed=false`;
   const r = await g(`${API}&pageSize=200&orderBy=name&fields=files(id,name)&q=${encodeURIComponent(q)}`);
-  const pre = low(b.name + ' - '), tail = /(^|\s-\s)(parti|partitura)$/i;
-  return r.files.map(f => { let n = f.name.replace(/\.pdf$/i, '').trim(); if (low(n).startsWith(pre)) n = n.slice(pre.length).trim(); return {id: f.id, name: n}; })
-    .filter(p => !tail.test(p.name))
-    .map(p => { const m = p.name.match(/^(?:.*? - )?(\d+)\s+(.+)$/); return m ? {id: p.id, num: +m[1], name: m[2].trim()} : null; }).filter(Boolean);
+  return r.files.map(f => ({id: f.id, ...Regole.parseFile(f.name, b.name)})).filter(p => p.kind === 'part').map(p => ({id: p.id, num: p.num, name: p.name}));
 }
 // Due parti A5 per foglio A4, nell'ordine in cui arrivano
 function sheets(out, cells) {
@@ -279,7 +276,7 @@ async function start() {
   } catch (err) { PANELS.forEach(p => p.msg('Errore: ' + err.message, true)); }
 }
 </script>
-<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F2</p>
+<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F6</p>
 <script>document.getElementById('ver').textContent += ' · regole: ' + (window.Regole && Regole.build ? Regole.build : 'vecchie o non caricate');</script>
 </body>
 </html>
