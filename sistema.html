@@ -272,7 +272,10 @@ function replan(r) {
     else { const w = inside(i.full || i.raw); if (w) i.raw = w; }
   });
   const all = r.items.filter(i => i.kind === 'part'), base = i => i.f.name.replace(/\.pdf$/i, '');
-  const parts = all.filter(i => !r.mark[i.f.id]).map((i, pos) => ({i, pos, c: r.force[i.f.id] ? null : (r.custom[i.f.id] || canon(i.raw))}));
+  const parts = all.filter(i => !r.mark[i.f.id]).map((i, pos) => ({i, pos, c: r.force[i.f.id] ? null : (r.custom[i.f.id] || canon(i.raw)), auto: !r.custom[i.f.id]}));
+  // due file riconosciuti in automatico come lo stesso strumento (es. due "Eufonio" che diventano entrambi «in C BC»): il sito non può sapere quale è quale, quindi li lascia da assegnare
+  const cnt = {}; parts.forEach(p => { if (p.c) cnt[p.c] = (cnt[p.c] || 0) + 1; });
+  parts.forEach(p => { if (p.c && p.auto && cnt[p.c] > 1 && !/^percussioni/i.test(p.c)) { p.i.dup = p.c; p.c = null; } else delete p.i.dup; });
   const unknown = parts.filter(p => !p.c).map(p => p.i);
   const n9 = p => p.i.num == null ? 999 : p.i.num;
   const oldIds = [...parts].sort((a, b) => n9(a) - n9(b) || a.pos - b.pos).map(p => p.i.f.id).join();
@@ -310,13 +313,17 @@ const pfill = raw => /^percussion/i.test(raw) ? raw.replace(/^percussion\w*\s*[-
 // Proposte per un nome non assegnato: prima le voci con la stessa tonalità ("Trombone 1 in Bb" -> Bb BC, Bb TC), poi le altre tonalità
 function suggestions(rawName) {
   const m = tidy(syn(rawName)).match(/^(.*?) in (c|bb|eb|f)(?: (?:bc|tc))?$/);
-  if (!m) { const g1 = guess(rawName); return g1 ? [g1] : []; }
+  if (!m) {
+    const tt = tidy(syn(rawName)), out = L.filter(x => key(x).startsWith(tt + ' in ')), g1 = guess(rawName);
+    if (g1 && !out.includes(g1)) out.unshift(g1);
+    return out.slice(0, 6);
+  }
   const same = L.filter(x => key(x).startsWith(m[1] + ' in ' + m[2])), other = L.filter(x => key(x).startsWith(m[1] + ' in ') && !same.includes(x));
   return [...same, ...other].slice(0, 6);
 }
 function unknownHtml(r, i, u) {
   const gs = suggestions(u.raw), k = esc(key(u.raw)), hasScore = r.items.some(x => x.kind === 'score'), d = `data-i="${i}" data-f="${u.f.id}" data-k="${k}"`;
-  return `<p class="u"><span class="warn">«${esc(u.f.name)}» non assegnato</span><br>Assegna a: <select class="sl" ${d}><option value="">Scegli…</option>${gs.length ? `<optgroup label="Suggeriti">${gs.map(x => `<option value="${esc(x)}">${esc(x)}</option>`).join('')}</optgroup>` : ''}<option value="@orig">Originale (aggiunge «Originale - » al nome)</option>${hasScore ? '' : '<option value="@score">Partitura</option>'}<option value="@skip">Ignora per ora</option>${L.map(x => `<option>${esc(x)}</option>`).join('')}</select><br>Oppure è una percussione: «Percussioni - » <input class="pn" value="${esc(pfill(u.raw))}" placeholder="nome, per esempio Triangolo" aria-label="Nome della percussione"> <button type="button" class="perc" ${d}>Assegna come percussione</button><br>Oppure aggiungi un nuovo strumento: <input class="nn" value="${esc(u.raw)}" aria-label="Nome del nuovo strumento"> dopo <select class="np" aria-label="Posizione nell’ordine">${L.map(x => `<option${x === 'Pianoforte' ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select> <button type="button" class="add" ${d}>Aggiungi e assegna</button></p>`;
+  return `<p class="u"><span class="warn">«${esc(u.f.name)}» non assegnato</span>${u.dup ? `<br><span class="warn">Più file risultano «${esc(u.dup)}»: scegli lo strumento esatto per ciascuno.</span>` : ''}<br>Assegna a: <select class="sl" ${d}><option value="">Scegli…</option>${gs.length ? `<optgroup label="Suggeriti">${gs.map(x => `<option value="${esc(x)}">${esc(x)}</option>`).join('')}</optgroup>` : ''}<option value="@orig">Originale (aggiunge «Originale - » al nome)</option>${hasScore ? '' : '<option value="@score">Partitura</option>'}<option value="@skip">Ignora per ora</option>${L.map(x => `<option>${esc(x)}</option>`).join('')}</select> <label class="inc"><input type="checkbox" class="ally"> anche gli altri file con questo stesso nome</label><br>Oppure è una percussione: «Percussioni - » <input class="pn" value="${esc(pfill(u.raw))}" placeholder="nome, per esempio Triangolo" aria-label="Nome della percussione"> <button type="button" class="perc" ${d}>Assegna come percussione</button><br>Oppure aggiungi un nuovo strumento: <input class="nn" value="${esc(u.raw)}" aria-label="Nome del nuovo strumento"> dopo <select class="np" aria-label="Posizione nell’ordine">${L.map(x => `<option${x === 'Pianoforte' ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select> <button type="button" class="add" ${d}>Aggiungi e assegna</button></p>`;
 }
 function render() {
   const todo = res.filter(r => !r.ok), blocked = todo.filter(r => r.plan.unknown.length).length;
@@ -341,7 +348,10 @@ $('#list').addEventListener('change', e => {
     if (!t.value) return;
     const r = res[+t.dataset.i];
     if (t.value[0] === '@') r.mark[t.dataset.f] = t.value.slice(1);
-    else { alias[t.dataset.k] = t.value; r.custom[t.dataset.f] = t.value; delete r.force[t.dataset.f]; }
+    else {
+      const ally = t.closest('p').querySelector('.ally'); if (ally && ally.checked) alias[t.dataset.k] = t.value; // solo se lo chiedi
+      r.custom[t.dataset.f] = t.value; delete r.force[t.dataset.f];
+    }
     res.forEach(replan); render();
   } else if (t.classList.contains('cb')) {
     const r = res[+t.dataset.i];
@@ -366,12 +376,12 @@ $('#list').addEventListener('click', async e => {
   const p = t.closest('p'), nm = p.querySelector('.nn').value.trim(), after = p.querySelector('.np').value, r = res[+t.dataset.i];
   if (!nm) return;
   const ex = L.find(x => key(x) === key(nm));
-  if (ex) alias[t.dataset.k] = ex;
+  if (ex) r.custom[t.dataset.f] = ex;
   else {
     if (!confirm(`Aggiungo «${nm}» all’ordine classico, dopo «${after}», per tutta la banda?`)) return;
     const nl = [...L]; nl.splice(L.indexOf(after) + 1, 0, nm);
     try { await saveOrder(nl); } catch (err) { $('#log').textContent += 'Non sono riuscito a salvare l’ordine: ' + err.message + '\n'; return; }
-    L = nl; alias[t.dataset.k] = nm; $('#log').textContent += `Aggiunto «${nm}» all’ordine classico (salvato per tutta la banda).\n`;
+    L = nl; r.custom[t.dataset.f] = nm; $('#log').textContent += `Aggiunto «${nm}» all’ordine classico (salvato per tutta la banda).\n`;
   }
   delete r.force[t.dataset.f];
   res.forEach(replan); render();
@@ -473,7 +483,7 @@ document.querySelector('main').addEventListener('click', async e => {
 });
 
 </script>
-<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F7</p>
+<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F8</p>
 <script>document.getElementById('ver').textContent += ' · regole: ' + (window.Regole && Regole.build ? Regole.build : 'vecchie o non caricate');</script>
 </body>
 </html>
