@@ -68,7 +68,7 @@ a{color:var(--navy)}
 </main>
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="regole.js?v=12"></script>
+<script src="regole.js?v=13"></script>
 <script>
 const CFG = {
   CLIENT_ID: '461215269916-tcd8cfsa5m951ohohibf4f8635tdgolp.apps.googleusercontent.com',
@@ -117,7 +117,7 @@ $('#login').onclick = () => {
   }).requestAccessToken();
 };
 async function g(url, opt = {}) {
-  const r = await fetch(url, {...opt, headers: {...(opt.headers || {}), Authorization: 'Bearer ' + tok}});
+  const r = await Regole.fetchRetry(url, {...opt, headers: {...(opt.headers || {}), Authorization: 'Bearer ' + tok}});
   if (r.status === 401) { expired(); throw new Error('Sessione scaduta: accedi di nuovo con Google.'); }
   if (!r.ok) throw new Error(await r.text());
   return r.json();
@@ -184,7 +184,7 @@ $('#list').addEventListener('click', async e => {
   t.disabled = false;
 });
 </script>
-<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F7</p>
+<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F9</p>
 
 </body>
 </html>

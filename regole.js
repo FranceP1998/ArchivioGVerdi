@@ -56,6 +56,32 @@
     return null;
   }
 
+  // ---- Richieste al Drive: pausa tra una e l'altra e nuovi tentativi se Google chiede di rallentare ----
+  let lastCall = 0;
+  const sleep = ms => new Promise(res => setTimeout(res, ms));
+  const waitBox = sec => {
+    if (typeof document === 'undefined') return;
+    let el = document.getElementById('drive-wait');
+    if (!el) {
+      el = document.createElement('div'); el.id = 'drive-wait'; el.setAttribute('role', 'status');
+      el.style.cssText = "position:fixed;left:1rem;right:1rem;bottom:1rem;max-width:34rem;margin:auto;background:#1E1937;color:#F6E1C9;padding:.7rem 1rem;border-radius:10px;font-family:Karla,sans-serif;z-index:50;text-align:center";
+      document.body.appendChild(el);
+    }
+    el.hidden = !sec; if (sec) el.textContent = `Il Drive chiede di rallentare: riprovo tra ${sec} secondi…`;
+  };
+  async function fetchRetry(url, opt) {
+    for (let attempt = 0; ; attempt++) {
+      const gap = lastCall + 150 - Date.now(); if (gap > 0) await sleep(gap);
+      lastCall = Date.now();
+      const r = await fetch(url, opt);
+      let limited = r.status === 429 || r.status >= 500;
+      if (r.status === 403) limited = /rateLimitExceeded|userRateLimitExceeded|quotaExceeded|backendError/i.test(await r.clone().text());
+      if (!limited || attempt >= 6) { waitBox(0); return r; }
+      const ms = Math.min(32000, 1000 * 2 ** attempt) + Math.random() * 500;
+      waitBox(Math.round(ms / 1000)); await sleep(ms);
+    }
+  }
+
   // ---- Sinonimi: "Flute" -> "flauto", "Sib" -> "bb", ... (parole intere, vince la frase più lunga) ----
   const SYN0 = [
     ['flute', 'flauto'], ['piccolo', 'ottavino'], ['clarinet', 'clarinetto'], ['cl', 'clarinetto'],
@@ -208,5 +234,5 @@
     return a ? parts.find(p => low(p.name) === a.part) : null;
   }
 
-  (typeof window !== 'undefined' ? window : globalThis).Regole = {build: 'F6', stripTitle, kindOf, parseFile, retitle, ORG0, KW0, SYN0, applySyn, setSynonyms, getSynonyms: () => SYN, parseOrg, parsePart, calc, partFor, percKey, ordKey, setKeywords, getKeywords: () => KW, norm};
+  (typeof window !== 'undefined' ? window : globalThis).Regole = {build: 'F9', fetchRetry, stripTitle, kindOf, parseFile, retitle, ORG0, KW0, SYN0, applySyn, setSynonyms, getSynonyms: () => SYN, parseOrg, parsePart, calc, partFor, percKey, ordKey, setKeywords, getKeywords: () => KW, norm};
 })();

@@ -15,8 +15,8 @@ h2{font-size:1.5rem}
 header{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;padding:.9rem clamp(1rem,4vw,3rem);background:#fff;border-bottom:4px solid var(--orange)}
 .logo{display:block;height:48px;width:auto;max-width:100%}
 .acc{display:flex;align-items:center;gap:.75rem}
-.nav{display:flex;gap:1.25rem;flex-wrap:wrap}
-.nav a{color:var(--navy);font-weight:600;text-decoration:none;padding:.25rem 0;border-bottom:3px solid transparent}
+.nav{display:flex;gap:.25rem 1.25rem;flex-wrap:wrap}
+.nav a{white-space:nowrap;color:var(--navy);font-weight:600;text-decoration:none;padding:.25rem 0;border-bottom:3px solid transparent}
 .nav a[aria-current]{border-bottom-color:var(--orange)}
 .nav a:hover{border-bottom-color:var(--sage)}
 #st{padding:.2rem .7rem;border-radius:999px;background:var(--sky);color:var(--navy);font-family:'Space Mono',monospace;font-size:.85rem}
@@ -86,7 +86,7 @@ select:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
 </main>
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="regole.js?v=12"></script>
+<script src="regole.js?v=13"></script>
 <script>
 const CFG = {
   CLIENT_ID: '461215269916-tcd8cfsa5m951ohohibf4f8635tdgolp.apps.googleusercontent.com',
@@ -122,7 +122,7 @@ $('#login').onclick = () => {
   }).requestAccessToken();
 };
 async function raw(url, opt = {}) {
-  const r = await fetch(url, {...opt, headers: {...(opt.headers || {}), Authorization: 'Bearer ' + tok}});
+  const r = await Regole.fetchRetry(url, {...opt, headers: {...(opt.headers || {}), Authorization: 'Bearer ' + tok}});
   if (r.status === 401) { expired(); throw new Error('Sessione scaduta: accedi di nuovo con Google.'); }
   if (!r.ok) throw new Error(await r.text());
   return r;
@@ -227,7 +227,7 @@ $('#save').onclick = async () => {
 };
 render();
 </script>
-<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F6</p>
+<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F9</p>
 <script>document.getElementById('ver').textContent += ' · regole: ' + (window.Regole && Regole.build ? Regole.build : 'vecchie o non caricate');</script>
 </body>
 </html>
