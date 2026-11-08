@@ -14,8 +14,8 @@ h1{font-size:clamp(2rem,5vw,3rem);color:var(--cream);line-height:1.1}
 header{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;padding:.9rem clamp(1rem,4vw,3rem);background:#fff;border-bottom:4px solid var(--orange)}
 .logo{display:block;height:48px;width:auto;max-width:100%}
 .acc{display:flex;align-items:center;gap:.75rem}
-.nav{display:flex;gap:1.25rem}
-.nav a{color:var(--navy);font-weight:600;text-decoration:none;padding:.25rem 0;border-bottom:3px solid transparent}
+.nav{display:flex;gap:.25rem 1.25rem;flex-wrap:wrap}
+.nav a{white-space:nowrap;color:var(--navy);font-weight:600;text-decoration:none;padding:.25rem 0;border-bottom:3px solid transparent}
 .nav a[aria-current]{border-bottom-color:var(--orange)}
 .nav a:hover{border-bottom-color:var(--sage)}
 #st{padding:.2rem .7rem;border-radius:999px;background:var(--sky);color:var(--navy);font-family:'Space Mono',monospace;font-size:.85rem}
@@ -184,7 +184,7 @@ $('#list').addEventListener('click', async e => {
   t.disabled = false;
 });
 </script>
-<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F6</p>
+<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F7</p>
 
 </body>
 </html>
