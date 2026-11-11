@@ -58,6 +58,11 @@ textarea{height:16rem;font-family:'Space Mono',monospace;font-size:.85rem;margin
 .cutwrap{position:relative;display:inline-block;line-height:0;touch-action:none;border:1px solid var(--navy);background:#fff}
 .cutwrap canvas{display:block}
 .abox{position:absolute;box-sizing:border-box;border:3px solid var(--orange);cursor:move;touch-action:none}
+.hdl{position:absolute;width:16px;height:16px;box-sizing:border-box;background:var(--navy);border:2px solid var(--cream);border-radius:3px;z-index:2}
+.hdl[data-c=tl]{left:-9px;top:-9px;cursor:nwse-resize}
+.hdl[data-c=br]{right:-9px;bottom:-9px;cursor:nwse-resize}
+.hdl[data-c=tr]{right:-9px;top:-9px;cursor:nesw-resize}
+.hdl[data-c=bl]{left:-9px;bottom:-9px;cursor:nesw-resize}
 .abox span{position:absolute;left:3px;top:2px;background:var(--orange);color:var(--navy);font:600 12px/1.3 Karla,sans-serif;padding:0 .4rem;border-radius:4px}
 #pv{height:74vh;overflow-y:auto;scroll-snap-type:y mandatory;border:1px solid var(--navy);border-radius:6px;background:var(--sky)}
 .pg{height:100%;scroll-snap-align:start;scroll-snap-stop:always;display:flex;align-items:center;justify-content:center}
@@ -93,7 +98,7 @@ textarea{height:16rem;font-family:'Space Mono',monospace;font-size:.85rem;margin
     <div id="pv" tabindex="0" aria-label="Anteprima del PDF"></div>
     <div id="cutbox" hidden>
       <p class="hint">Qui vedi tutti i fogli sovrapposti. I due riquadri hanno esattamente le proporzioni di un A5 (148 × 210 mm): trascinali sopra le due parti e, se serve, rimpiccioliscili. Ogni parte diventa una pagina A5 esatta, uguale per tutti i fogli.</p>
-      <div class="cutctl"><label for="bsz">Dimensione <input id="bsz" type="range" min="50" max="100" step="1" value="100"> <span id="bszv">100%</span></label>
+      <div class="cutctl"><label for="bsz">Dimensione <input id="bsz" type="range" min="40" max="100" step="1" value="100"> <span id="bszv">100%</span></label>
         <button type="button" id="cutreset">Ripristina</button>
         <button type="button" id="cutok" class="main">Fatto</button></div>
       <div class="cutwrap" id="cutwrap"><canvas id="cutcv" aria-label="Fogli sovrapposti"></canvas></div>
@@ -410,7 +415,7 @@ function drawBoxes() {
   cfg.pos = cfg.pos.map(q => ({x: Math.min(1 - bw / 2, Math.max(bw / 2, q.x)), y: Math.min(1 - bh / 2, Math.max(bh / 2, q.y))}));
   [0, 1].forEach(k => {
     let el = document.getElementById('abox' + k);
-    if (!el) { el = document.createElement('div'); el.id = 'abox' + k; el.className = 'abox'; el.dataset.k = k; el.innerHTML = `<span>${k + 1}</span>`; $('#cutwrap').appendChild(el); }
+    if (!el) { el = document.createElement('div'); el.id = 'abox' + k; el.className = 'abox'; el.dataset.k = k; el.innerHTML = `<span>${k + 1}</span><i class="hdl" data-c="tl"></i><i class="hdl" data-c="tr"></i><i class="hdl" data-c="bl"></i><i class="hdl" data-c="br"></i>`; $('#cutwrap').appendChild(el); }
     el.style.left = (cfg.pos[k].x - bw / 2) * 100 + '%'; el.style.top = (cfg.pos[k].y - bh / 2) * 100 + '%'; el.style.width = bw * 100 + '%'; el.style.height = bh * 100 + '%';
   });
   $('#cutval').textContent = cfg.custom ? 'personalizzati' : 'centrati nelle due metà';
@@ -442,16 +447,28 @@ async function renderCut() {
   drawBoxes(); $('#cutmsg').textContent = idx.length + (idx.length === 1 ? ' foglio' : ' fogli') + ' sovrapposti.';
 }
 const frac = e => { const r = $('#cutcv').getBoundingClientRect(); return {x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height}; };
+let sizeDrag = null;
 $('#cutwrap').addEventListener('pointerdown', e => {
-  const el = e.target.closest('.abox'); if (!el) return;
-  const k = +el.dataset.k, f = frac(e); boxDrag = {k, dx: f.x - cfg.pos[k].x, dy: f.y - cfg.pos[k].y};
+  const h = e.target.closest('.hdl'), el = e.target.closest('.abox'); if (!el) return;
+  const k = +el.dataset.k;
+  if (h) {   // angolo: ridimensiona entrambi i riquadri allo stesso modo, tenendo fermo l'angolo opposto di ciascuno
+    const bd = boxDims(cutDim.w, cutDim.h, cfg.dir, cfg.pct), bw = bd.W / cutDim.w, bh = bd.H / cutDim.h, right = h.dataset.c.includes('r'), bottom = h.dataset.c.includes('b');
+    sizeDrag = {k, right, bottom, anchors: cfg.pos.map(q => ({x: right ? q.x - bw / 2 : q.x + bw / 2, y: bottom ? q.y - bh / 2 : q.y + bh / 2}))};
+  } else { const f = frac(e); boxDrag = {k, dx: f.x - cfg.pos[k].x, dy: f.y - cfg.pos[k].y}; }
   e.currentTarget.setPointerCapture(e.pointerId); e.preventDefault();
 });
 $('#cutwrap').addEventListener('pointermove', e => {
-  if (!boxDrag) return; const f = frac(e);
-  cfg.pos[boxDrag.k] = {x: f.x - boxDrag.dx, y: f.y - boxDrag.dy}; cfg.custom = true; drawBoxes();
+  const f = frac(e);
+  if (sizeDrag) {
+    const {k, right, bottom, anchors} = sizeDrag, A = anchors[k], d100 = boxDims(cutDim.w, cutDim.h, cfg.dir, 100);
+    const pct = Math.max(Math.abs(f.x - A.x) * cutDim.w / d100.W, Math.abs(f.y - A.y) * cutDim.h / d100.H) * 100;
+    cfg.pct = Math.round(Math.min(100, Math.max(40, pct)));
+    const bd = boxDims(cutDim.w, cutDim.h, cfg.dir, cfg.pct), bw = bd.W / cutDim.w, bh = bd.H / cutDim.h;
+    cfg.pos = anchors.map(an => ({x: right ? an.x + bw / 2 : an.x - bw / 2, y: bottom ? an.y + bh / 2 : an.y - bh / 2}));
+    cfg.custom = true; $('#bsz').value = cfg.pct; $('#bszv').textContent = cfg.pct + '%'; drawBoxes();
+  } else if (boxDrag) { cfg.pos[boxDrag.k] = {x: f.x - boxDrag.dx, y: f.y - boxDrag.dy}; cfg.custom = true; drawBoxes(); }
 });
-$('#cutwrap').addEventListener('pointerup', () => { if (boxDrag) { boxDrag = null; later(); } });
+$('#cutwrap').addEventListener('pointerup', () => { if (sizeDrag || boxDrag) { sizeDrag = boxDrag = null; later(); } });
 $('#bsz').oninput = () => { cfg.pct = +$('#bsz').value; cfg.custom = true; $('#bszv').textContent = cfg.pct + '%'; drawBoxes(); later(); };
 $('#cutreset').onclick = () => { cfg.pos = defPos(cfg.dir); cfg.pct = 100; cfg.custom = false; $('#bsz').value = 100; $('#bszv').textContent = '100%'; drawBoxes(); later(); };
 const showCut = on => { cutOpen = on; $('#cutbox').hidden = !on; $('#pv').hidden = on; document.querySelector('.vbar').hidden = on; };
@@ -552,7 +569,7 @@ $('#go').onclick = async () => {
 
 fillList(); draw();
 </script>
-<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F14</p>
+<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F15</p>
 <script>document.getElementById('ver').textContent += ' · regole: ' + (window.Regole && Regole.build ? Regole.build : 'vecchie o non caricate');</script>
 </body>
 </html>
