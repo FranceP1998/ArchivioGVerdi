@@ -52,6 +52,14 @@ textarea{height:16rem;font-family:'Space Mono',monospace;font-size:.85rem;margin
 .nav a[aria-current]{border-bottom-color:var(--orange)}
 .nav a:hover{border-bottom-color:var(--sage)}
 @media(min-width:861px){.left{position:sticky;top:1rem;max-height:calc(100vh - 2rem);overflow:auto}.left #pv{height:calc(100vh - 17rem);min-height:18rem}}
+.cutctl{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-bottom:.6rem}
+.cutctl input{width:5rem;text-align:center;display:inline-block;font-family:'Space Mono',monospace}
+.cutwrap{position:relative;display:inline-block;line-height:0;touch-action:none;cursor:ew-resize;border:1px solid var(--navy);background:#fff}
+.cutwrap.tb{cursor:ns-resize}
+.cutwrap canvas{display:block}
+.cutln{position:absolute;background:var(--orange);pointer-events:none}
+.cutwrap:not(.tb) .cutln{top:0;bottom:0;width:3px;margin-left:-1.5px}
+.cutwrap.tb .cutln{left:0;right:0;height:3px;margin-top:-1.5px}
 #pv{height:74vh;overflow-y:auto;scroll-snap-type:y mandatory;border:1px solid var(--navy);border-radius:6px;background:var(--sky)}
 .pg{height:100%;scroll-snap-align:start;scroll-snap-stop:always;display:flex;align-items:center;justify-content:center}
 .pg canvas{background:#fff}
@@ -84,6 +92,15 @@ textarea{height:16rem;font-family:'Space Mono',monospace;font-size:.85rem;margin
     <ol id="fl"></ol>
     <div class="vbar"><button id="prev" type="button" aria-label="Pagina precedente">‹</button><label class="go" for="pn">Pagina <input id="pn" type="number" min="1" value="1"> di <span id="pt">0</span></label><button id="next" type="button" aria-label="Pagina successiva">›</button></div>
     <div id="pv" tabindex="0" aria-label="Anteprima del PDF"></div>
+    <div id="cutbox" hidden>
+      <p class="hint">Qui vedi tutti i fogli sovrapposti. Trascina la linea arancione in un punto libero su tutte le pagine, oppure scrivi la percentuale. Il taglio vale per tutti i fogli.</p>
+      <div class="cutctl"><button type="button" id="cutm" aria-label="Taglio più indietro">‹</button>
+        <label for="cutpct">Taglio al <input id="cutpct" type="number" min="20" max="80" step="0.5" value="50">% <span id="cutfrom"></span></label>
+        <button type="button" id="cutp" aria-label="Taglio più avanti">›</button>
+        <button type="button" id="cutok" class="main">Fatto</button></div>
+      <div class="cutwrap" id="cutwrap"><canvas id="cutcv" aria-label="Fogli sovrapposti"></canvas><div id="cutln" class="cutln"></div></div>
+      <p id="cutmsg" class="mono"></p>
+    </div>
   </section>
 
   <section>
@@ -99,6 +116,7 @@ textarea{height:16rem;font-family:'Space Mono',monospace;font-size:.85rem;margin
       <label class="inc"><input type="checkbox" id="a5" checked> Marcia: dividi ogni foglio in due parti A5</label>
       <label class="inc" for="ns">Fogli da non dividere (per esempio la partitura A4 nello stesso PDF)<input id="ns" placeholder="per esempio 1-8"></label>
       <label class="inc"><input type="checkbox" id="orig"> Mostra i fogli originali (solo per guardare; le pagine da inserire restano quelle del PDF diviso)</label>
+      <div class="inc" id="cutrow">Posizione del taglio: <b id="cutval">50%</b> <button type="button" id="cutbtn">Imposta il taglio sulle pagine</button></div>
       <label class="inc" for="dir">Disposizione delle parti sul foglio <select id="dir"><option value="auto">Automatica</option><option value="lr">Affiancate</option><option value="tb">Una sopra l’altra</option></select></label>
     </div>
     <h2 style="margin-top:1.5rem">Parti nell’ordine del PDF</h2>
@@ -310,7 +328,7 @@ $('#pv').onkeydown = e => {
 let srcs = [], origBytes, procBytes;
 $('#f').onchange = async e => {
   const fs = [...e.target.files]; if (!fs.length) return;
-  $('#tot').textContent = 'Carico…';
+  $('#tot').textContent = 'Carico…'; setCut(.5, false); showCut(false);
   try {
     srcs = [];
     for (const f of fs) srcs.push({name: f.name, buf: await f.arrayBuffer()});
@@ -336,7 +354,7 @@ async function rebuild() {
   origBytes = bytes;
   if ($('#cat').value === 'marce' && $('#a5').checked) {
     $('#tot').textContent = 'Divido i fogli in due parti…';
-    const m = await PDFLib.PDFDocument.load(bytes, {ignoreEncryption: true}), h = await halves(m, $('#dir').value, parseSkip($('#ns').value));
+    const m = await PDFLib.PDFDocument.load(bytes, {ignoreEncryption: true}), h = await halves(m, $('#dir').value, parseSkip($('#ns').value), cutPos);
     bytes = await h.save();
     note = ` · da ${m.getPageCount()} fogli a ${h.getPageCount()} pagine`;
   }
@@ -361,14 +379,15 @@ const parseSkip = t => {
   t.replace(/\s*[-–]\s*/g, '-').split(/[,;\s]+/).filter(Boolean).forEach(x => { const r = x.match(/^(\d+)(?:-(\d+))?$/); if (r) for (let i = +r[1]; i <= +(r[2] || r[1]); i++) s.add(i); });
   return s;
 };
-async function halves(m, dir, skip) {
+async function halves(m, dir, skip, f = .5) {
   const out = await PDFLib.PDFDocument.create();
   for (const [pi, p] of m.getPages().entries()) {
     if (skip.has(pi + 1)) { const [c] = await out.copyPages(m, [pi]); out.addPage(c); continue; }
-    const b = p.getMediaBox(), w = b.width, h = b.height, side = dir === 'auto' ? (w >= h ? 'lr' : 'tb') : dir;
-    const boxes = side === 'lr'
-      ? [{left: b.x, right: b.x + w / 2, bottom: b.y, top: b.y + h}, {left: b.x + w / 2, right: b.x + w, bottom: b.y, top: b.y + h}]
-      : [{left: b.x, right: b.x + w, bottom: b.y + h / 2, top: b.y + h}, {left: b.x, right: b.x + w, bottom: b.y, top: b.y + h / 2}];
+    const b = p.getMediaBox(), w = b.width, h = b.height, side = dir === 'auto' ? (w >= h ? 'lr' : 'tb') : dir, lr = side === 'lr', cut = lr ? w * f : h * f;
+    // f = posizione del taglio, dalla sinistra (parti affiancate) o dall'alto (una sopra l'altra); 0.5 = a metà
+    const boxes = lr
+      ? [{left: b.x, right: b.x + cut, bottom: b.y, top: b.y + h}, {left: b.x + cut, right: b.x + w, bottom: b.y, top: b.y + h}]
+      : [{left: b.x, right: b.x + w, bottom: b.y + h - cut, top: b.y + h}, {left: b.x, right: b.x + w, bottom: b.y, top: b.y + h - cut}];
     for (const bb of boxes) {
       const e = await out.embedPage(p, bb), np = out.addPage([e.width, e.height]);
       np.drawPage(e, {x: 0, y: 0});
@@ -376,9 +395,60 @@ async function halves(m, dir, skip) {
   }
   return out;
 }
+// ---- Taglio: tutti i fogli sovrapposti, con una linea da trascinare dove tagliare ----
+let cutPos = .5, cutOpen = false, cutDir = 'lr', cutSig = '', tdeb = null;
+const clampCut = v => Math.min(.8, Math.max(.2, v));
+function placeLine() {
+  const ln = $('#cutln');
+  if (cutDir === 'lr') { ln.style.left = cutPos * 100 + '%'; ln.style.top = ''; } else { ln.style.top = cutPos * 100 + '%'; ln.style.left = ''; }
+}
+function setCut(v, rebuildLater) {
+  cutPos = clampCut(v); const pc = Math.round(cutPos * 1000) / 10;
+  $('#cutpct').value = pc; $('#cutval').textContent = pc + '%'; placeLine();
+  if (rebuildLater) { clearTimeout(tdeb); tdeb = setTimeout(again, 350); }
+}
+async function renderCut() {
+  if (!origBytes) return;
+  $('#cutmsg').textContent = 'Preparo i fogli…';
+  cutSig = srcs.map(s => s.name + s.buf.byteLength).join('|') + $('#ns').value + $('#dir').value;
+  const doc = await pdfjsLib.getDocument({data: new Uint8Array(origBytes.slice(0))}).promise, skip = parseSkip($('#ns').value), idx = [];
+  for (let i = 1; i <= doc.numPages; i++) if (!skip.has(i)) idx.push(i);
+  if (!idx.length) { $('#cutmsg').textContent = 'Non ci sono fogli da dividere.'; return; }
+  const v0 = (await doc.getPage(idx[0])).getViewport({scale: 1}), sel = $('#dir').value;
+  cutDir = sel === 'auto' ? (v0.width >= v0.height ? 'lr' : 'tb') : sel;
+  const dpr = Math.min(2, window.devicePixelRatio || 1), availW = Math.max(240, $('#cutbox').clientWidth - 4), availH = Math.max(240, window.innerHeight - 320);
+  const sc = Math.min(availW / v0.width, availH / v0.height), cw = Math.round(v0.width * sc), ch = Math.round(v0.height * sc);
+  const cv = $('#cutcv'), ctx = cv.getContext('2d'), tmp = document.createElement('canvas');
+  cv.width = tmp.width = Math.round(cw * dpr); cv.height = tmp.height = Math.round(ch * dpr);
+  cv.style.width = cw + 'px'; cv.style.height = ch + 'px';
+  ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+  const tctx = tmp.getContext('2d');
+  for (const i of idx) {   // "darken": resta visibile ogni segno presente in almeno uno dei fogli
+    const p = await doc.getPage(i), vp = p.getViewport({scale: cv.width / p.getViewport({scale: 1}).width});
+    tctx.fillStyle = '#fff'; tctx.fillRect(0, 0, tmp.width, tmp.height);
+    await p.render({canvasContext: tctx, viewport: vp}).promise;
+    ctx.globalCompositeOperation = 'darken'; ctx.drawImage(tmp, 0, 0);
+  }
+  ctx.globalCompositeOperation = 'source-over';
+  $('#cutwrap').className = 'cutwrap' + (cutDir === 'tb' ? ' tb' : '');
+  $('#cutfrom').textContent = cutDir === 'lr' ? 'da sinistra' : 'dall’alto';
+  placeLine(); $('#cutmsg').textContent = idx.length + (idx.length === 1 ? ' foglio' : ' fogli') + ' sovrapposti.';
+}
+const cutFrom = e => { const r = $('#cutcv').getBoundingClientRect(); return cutDir === 'lr' ? (e.clientX - r.left) / r.width : (e.clientY - r.top) / r.height; };
+let cutDrag = false;
+$('#cutwrap').addEventListener('pointerdown', e => { cutDrag = true; e.currentTarget.setPointerCapture(e.pointerId); setCut(cutFrom(e), false); });
+$('#cutwrap').addEventListener('pointermove', e => { if (cutDrag) setCut(cutFrom(e), false); });
+$('#cutwrap').addEventListener('pointerup', () => { if (cutDrag) { cutDrag = false; setCut(cutPos, true); } });
+$('#cutpct').onchange = () => setCut((+$('#cutpct').value || 50) / 100, true);
+$('#cutm').onclick = () => setCut(cutPos - .005, true);
+$('#cutp').onclick = () => setCut(cutPos + .005, true);
+const showCut = on => { cutOpen = on; $('#cutbox').hidden = !on; $('#pv').hidden = on; document.querySelector('.vbar').hidden = on; };
+$('#cutbtn').onclick = async () => { showCut(true); try { await renderCut(); } catch (e) { $('#cutmsg').textContent = 'Non riesco a mostrare i fogli: ' + e.message; } };
+$('#cutok').onclick = () => showCut(false);
 const again = () => { if (srcs.length) rebuild().catch(e => { $('#tot').textContent = 'Impossibile elaborare i PDF: ' + e.message; }); };
 $('#cat').onchange = () => { $('#mo').hidden = $('#cat').value !== 'marce'; again(); };
-$('#a5').onchange = $('#dir').onchange = $('#ns').onchange = again;
+$('#a5').onchange = () => { $('#cutrow').hidden = !$('#a5').checked; again(); };
+$('#dir').onchange = $('#ns').onchange = () => { again(); if (cutOpen) renderCut().catch(() => {}); };
 $('#orig').onchange = () => { if (procBytes) openViewer(($('#orig').checked ? origBytes : procBytes).slice(0)); };
 async function cut(a, b) {
   const d = await PDFLib.PDFDocument.create();
@@ -470,7 +540,7 @@ $('#go').onclick = async () => {
 
 fillList(); draw();
 </script>
-<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F12</p>
+<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F13</p>
 <script>document.getElementById('ver').textContent += ' · regole: ' + (window.Regole && Regole.build ? Regole.build : 'vecchie o non caricate');</script>
 </body>
 </html>
