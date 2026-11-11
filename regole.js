@@ -82,6 +82,27 @@
     }
   }
 
+  // ---- Impaginazione "2 parti A5 per foglio A4": le pagine grandi (es. la partitura in A4) restano una per foglio ----
+  const A4AREA = 595.28 * 841.89;
+  function placePair(out, a, b) {
+    const land = a.height >= a.width, W = land ? 841.89 : 595.28, H = land ? 595.28 : 841.89;   // A5 verticale: due affiancate su A4 orizzontale; A5 orizzontale: una sopra l'altra su A4 verticale
+    const pg = out.addPage([W, H]), cw = land ? W / 2 : W, ch = land ? H : H / 2;
+    [a, b].forEach((e, j) => {
+      if (!e) return;
+      const s = Math.min(cw / e.width, ch / e.height), w = e.width * s, h = e.height * s;
+      pg.drawPage(e, {x: land ? j * cw + (cw - w) / 2 : (cw - w) / 2, y: land ? (ch - h) / 2 : (j === 0 ? ch : 0) + (ch - h) / 2, width: w, height: h});
+    });
+  }
+  function sheets(out, cells) {
+    let pend = [];
+    const flush = () => { for (let i = 0; i < pend.length; i += 2) placePair(out, pend[i], pend[i + 1]); pend = []; };
+    for (const c of cells) {
+      if (c.width * c.height > 0.6 * A4AREA) { flush(); out.addPage([c.width, c.height]).drawPage(c, {x: 0, y: 0}); } // pagina grande: sola sul suo foglio, com'è
+      else pend.push(c);
+    }
+    flush();
+  }
+
   // ---- Sinonimi: "Flute" -> "flauto", "Sib" -> "bb", ... (parole intere, vince la frase più lunga) ----
   const SYN0 = [
     ['flute', 'flauto'], ['piccolo', 'ottavino'], ['clarinet', 'clarinetto'], ['cl', 'clarinetto'],
@@ -234,5 +255,5 @@
     return a ? parts.find(p => low(p.name) === a.part) : null;
   }
 
-  (typeof window !== 'undefined' ? window : globalThis).Regole = {build: 'F9', fetchRetry, stripTitle, kindOf, parseFile, retitle, ORG0, KW0, SYN0, applySyn, setSynonyms, getSynonyms: () => SYN, parseOrg, parsePart, calc, partFor, percKey, ordKey, setKeywords, getKeywords: () => KW, norm};
+  (typeof window !== 'undefined' ? window : globalThis).Regole = {build: 'F15', fetchRetry, sheets, stripTitle, kindOf, parseFile, retitle, ORG0, KW0, SYN0, applySyn, setSynonyms, getSynonyms: () => SYN, parseOrg, parsePart, calc, partFor, percKey, ordKey, setKeywords, getKeywords: () => KW, norm};
 })();
