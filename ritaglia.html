@@ -100,8 +100,8 @@ pre{white-space:pre-wrap;font-family:'Space Mono',monospace;font-size:.85rem;mar
     <h2>2. Riquadro</h2>
     <div class="bar"><label for="dir">Direzione</label><select id="dir"><option value="auto">Automatica</option><option value="lr">Contenuto a sinistra o a destra</option><option value="tb">Contenuto in alto o in basso</option></select>
       <button type="button" id="h1"></button><button type="button" id="h2"></button>
-      <label for="bsz">Dimensione <input id="bsz" type="range" min="30" max="100" value="100" style="width:8rem"> <span id="bszv" class="mono">100%</span></label></div>
-    <p class="hint">Vedi tutti i fogli sovrapposti. Trascina il riquadro arancione sulla metà piena; con le maniglie agli angoli lo ridimensioni mantenendo le proporzioni A5.</p>
+      <label for="bsz">Dimensione <input id="bsz" type="range" min="30" max="150" value="100" style="width:8rem"> <span id="bszv" class="mono">100%</span></label></div>
+    <p class="hint">Vedi tutti i fogli sovrapposti. Trascina il riquadro arancione sulla metà piena; con le maniglie agli angoli lo ridimensioni mantenendo le proporzioni A5. Puoi andare oltre il 100% (fino al 150%): se esce dal foglio, nel ritaglio viene aggiunto bordo bianco.</p>
     <div class="cols2">
       <div><div class="cutwrap" id="cutwrap"><canvas id="cutcv" aria-label="Fogli sovrapposti"></canvas></div><p id="cutmsg" class="mono"></p></div>
       <div><h2 style="font-size:1.1rem">Come verrà il primo file</h2><canvas id="prevcv" aria-label="Anteprima del primo file"></canvas><p id="prevmsg" class="mono"></p></div>
@@ -194,13 +194,13 @@ const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 // Riquadro con le proporzioni esatte di un A5; pct = % rispetto alla metà del foglio
 function boxDims(w, h, dir, pct) {
   const ar = dir === 'lr' ? A5.w / A5.h : A5.h / A5.w, Hd = dir === 'lr' ? Math.min(h, (w / 2) / ar) : Math.min(h / 2, w / ar);
-  const H = Hd * Math.min(pct / 100, h / Hd, w / (Hd * ar)); return {W: H * ar, H};
+  const H = Hd * pct / 100; return {W: H * ar, H};   // anche oltre il 100%: il riquadro può uscire dal foglio, e allora aggiunge bordo bianco
 }
 // Il riquadro su una pagina: coordinate PDF, frazioni (dall'alto) e lato
 function boxFor(p) {
   const b = p.getMediaBox(), w = b.width, h = b.height, sel = $('#dir').value, side = sel === 'auto' ? (w >= h ? 'lr' : 'tb') : sel;
   const {W, H} = boxDims(w, h, side, cfg.pct), pos = side === cfg.dir ? cfg.pos : defPos(side);
-  const left = clamp(b.x + pos.x * w - W / 2, b.x, b.x + w - W), bottom = clamp(b.y + h - pos.y * h - H / 2, b.y, b.y + h - H);
+  const left = b.x + pos.x * w - W / 2, bottom = b.y + h - pos.y * h - H / 2;
   return {side, left, bottom, W, H, fr: {x0: (left - b.x) / w, x1: (left + W - b.x) / w, y0: (b.y + h - bottom - H) / h, y1: (b.y + h - bottom) / h}};
 }
 const sel = () => files.filter(f => f.on);
@@ -250,7 +250,7 @@ $('#fl').addEventListener('change', e => { if (e.target.classList.contains('fc')
 // ---- Fogli sovrapposti con il riquadro ----
 function drawBox() {
   const bd = boxDims(cutDim.w, cutDim.h, cfg.dir, cfg.pct), bw = bd.W / cutDim.w, bh = bd.H / cutDim.h;
-  cfg.pos = {x: clamp(cfg.pos.x, bw / 2, 1 - bw / 2), y: clamp(cfg.pos.y, bh / 2, 1 - bh / 2)};
+  cfg.pos = {x: clamp(cfg.pos.x, 0, 1), y: clamp(cfg.pos.y, 0, 1)};   // il centro resta sul foglio; il riquadro può sporgere
   let el = document.getElementById('abox');
   if (!el) { el = document.createElement('div'); el.id = 'abox'; el.className = 'abox'; el.innerHTML = ['tl', 'tr', 'bl', 'br'].map(c => `<i class="hdl" data-c="${c}"></i>`).join(''); $('#cutwrap').appendChild(el); }
   el.style.left = (cfg.pos.x - bw / 2) * 100 + '%'; el.style.top = (cfg.pos.y - bh / 2) * 100 + '%'; el.style.width = bw * 100 + '%'; el.style.height = bh * 100 + '%';
@@ -282,8 +282,8 @@ async function renderPrev() {
   const bd = boxDims(v1.width, v1.height, side, cfg.pct), pos = side === cfg.dir ? cfg.pos : defPos(side), sc = 1.6;
   const tmp = document.createElement('canvas'), vp = p.getViewport({scale: sc}); tmp.width = vp.width; tmp.height = vp.height;
   const tctx = tmp.getContext('2d'); tctx.fillStyle = '#fff'; tctx.fillRect(0, 0, tmp.width, tmp.height); await p.render({canvasContext: tctx, viewport: vp}).promise;
-  const sx = clamp(pos.x * v1.width - bd.W / 2, 0, v1.width - bd.W) * sc, sy = clamp(pos.y * v1.height - bd.H / 2, 0, v1.height - bd.H) * sc, sw = bd.W * sc, sh = bd.H * sc;
-  const cv = $('#prevcv'); cv.width = Math.round(sw); cv.height = Math.round(sh); cv.getContext('2d').drawImage(tmp, sx, sy, sw, sh, 0, 0, cv.width, cv.height);
+  const sx = (pos.x * v1.width - bd.W / 2) * sc, sy = (pos.y * v1.height - bd.H / 2) * sc, sw = bd.W * sc, sh = bd.H * sc;
+  const cv = $('#prevcv'); cv.width = Math.round(sw); cv.height = Math.round(sh); const pc = cv.getContext('2d'); pc.fillStyle = '#fff'; pc.fillRect(0, 0, cv.width, cv.height); pc.drawImage(tmp, -sx, -sy);
   $('#prevmsg').textContent = f.name + ' · pag. 1 · ' + (side === 'lr' ? '148 × 210' : '210 × 148') + ' mm';
 }
 const later = () => { clearTimeout(tdeb); tdeb = setTimeout(() => renderPrev().catch(() => {}), 300); };
@@ -301,7 +301,7 @@ $('#cutwrap').addEventListener('pointermove', e => {
   if (!drag) return; const f = frac(e);
   if (drag.size) {
     const d100 = boxDims(cutDim.w, cutDim.h, cfg.dir, 100);
-    cfg.pct = Math.round(clamp(Math.max(Math.abs(f.x - drag.a.x) * cutDim.w / d100.W, Math.abs(f.y - drag.a.y) * cutDim.h / d100.H) * 100, 30, 100));
+    cfg.pct = Math.round(clamp(Math.max(Math.abs(f.x - drag.a.x) * cutDim.w / d100.W, Math.abs(f.y - drag.a.y) * cutDim.h / d100.H) * 100, 30, 150));
     const bd = boxDims(cutDim.w, cutDim.h, cfg.dir, cfg.pct), bw = bd.W / cutDim.w, bh = bd.H / cutDim.h;
     cfg.pos = {x: drag.right ? drag.a.x + bw / 2 : drag.a.x - bw / 2, y: drag.bottom ? drag.a.y + bh / 2 : drag.a.y - bh / 2};
     $('#bsz').value = cfg.pct; $('#bszv').textContent = cfg.pct + '%';
