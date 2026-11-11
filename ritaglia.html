@@ -100,8 +100,8 @@ pre{white-space:pre-wrap;font-family:'Space Mono',monospace;font-size:.85rem;mar
     <h2>2. Riquadro</h2>
     <div class="bar"><label for="dir">Direzione</label><select id="dir"><option value="auto">Automatica</option><option value="lr">Contenuto a sinistra o a destra</option><option value="tb">Contenuto in alto o in basso</option></select>
       <button type="button" id="h1"></button><button type="button" id="h2"></button>
-      <label for="bsz">Dimensione <input id="bsz" type="range" min="30" max="150" value="100" style="width:8rem"> <span id="bszv" class="mono">100%</span></label></div>
-    <p class="hint">Vedi tutti i fogli sovrapposti. Trascina il riquadro arancione sulla metà piena; con le maniglie agli angoli lo ridimensioni mantenendo le proporzioni A5. Puoi andare oltre il 100% (fino al 150%): se esce dal foglio, nel ritaglio viene aggiunto bordo bianco.</p>
+      <label for="bsz">Dimensione <input id="bsz" type="range" min="30" max="200" value="100" style="width:8rem"> <span id="bszv" class="mono">100%</span></label></div>
+    <p class="hint">Vedi tutti i fogli sovrapposti. Trascina il riquadro arancione sulla metà piena; con le maniglie agli angoli lo ridimensioni mantenendo le proporzioni A5. Puoi andare oltre il 100% (fino al 200%): se esce dal foglio, nel ritaglio viene aggiunto bordo bianco.</p>
     <div class="cols2">
       <div><div class="cutwrap" id="cutwrap"><canvas id="cutcv" aria-label="Fogli sovrapposti"></canvas></div><p id="cutmsg" class="mono"></p></div>
       <div><h2 style="font-size:1.1rem">Come verrà il primo file</h2><canvas id="prevcv" aria-label="Anteprima del primo file"></canvas><p id="prevmsg" class="mono"></p></div>
@@ -301,7 +301,7 @@ $('#cutwrap').addEventListener('pointermove', e => {
   if (!drag) return; const f = frac(e);
   if (drag.size) {
     const d100 = boxDims(cutDim.w, cutDim.h, cfg.dir, 100);
-    cfg.pct = Math.round(clamp(Math.max(Math.abs(f.x - drag.a.x) * cutDim.w / d100.W, Math.abs(f.y - drag.a.y) * cutDim.h / d100.H) * 100, 30, 150));
+    cfg.pct = Math.round(clamp(Math.max(Math.abs(f.x - drag.a.x) * cutDim.w / d100.W, Math.abs(f.y - drag.a.y) * cutDim.h / d100.H) * 100, 30, 200));
     const bd = boxDims(cutDim.w, cutDim.h, cfg.dir, cfg.pct), bw = bd.W / cutDim.w, bh = bd.H / cutDim.h;
     cfg.pos = {x: drag.right ? drag.a.x + bw / 2 : drag.a.x - bw / 2, y: drag.bottom ? drag.a.y + bh / 2 : drag.a.y - bh / 2};
     $('#bsz').value = cfg.pct; $('#bszv').textContent = cfg.pct + '%';
