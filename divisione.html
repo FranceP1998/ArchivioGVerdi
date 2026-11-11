@@ -51,6 +51,7 @@ textarea{height:16rem;font-family:'Space Mono',monospace;font-size:.85rem;margin
 .nav a{white-space:nowrap;color:var(--navy);font-weight:600;text-decoration:none;padding:.25rem 0;border-bottom:3px solid transparent}
 .nav a[aria-current]{border-bottom-color:var(--orange)}
 .nav a:hover{border-bottom-color:var(--sage)}
+@media(min-width:861px){.left{position:sticky;top:1rem;max-height:calc(100vh - 2rem);overflow:auto}.left #pv{height:calc(100vh - 17rem);min-height:18rem}}
 #pv{height:74vh;overflow-y:auto;scroll-snap-type:y mandatory;border:1px solid var(--navy);border-radius:6px;background:var(--sky)}
 .pg{height:100%;scroll-snap-align:start;scroll-snap-stop:always;display:flex;align-items:center;justify-content:center}
 .pg canvas{background:#fff}
@@ -61,6 +62,8 @@ textarea{height:16rem;font-family:'Space Mono',monospace;font-size:.85rem;margin
 #fl{margin:0 0 .75rem}
 [hidden]{display:none!important}
 .inc{display:block;margin:.6rem 0;font-weight:400}
+.ppp{display:inline-flex;align-items:center;gap:.4rem;margin-left:.9rem;font-weight:400}
+.ppp input{width:4.5rem;text-align:center;font-family:'Space Mono',monospace}
 .inc input[type=checkbox]{width:auto;margin-right:.4rem}
 </style>
 </head>
@@ -73,7 +76,7 @@ textarea{height:16rem;font-family:'Space Mono',monospace;font-size:.85rem;margin
 <div class="band"><h1>Aggiungi brano</h1><p>Dividi i PDF in parti e caricali nell’archivio</p></div>
 
 <main>
-  <section>
+  <section class="left">
     <h2>PDF da dividere</h2>
     <input type="file" id="f" accept="application/pdf" multiple aria-label="Scegli il PDF">
     <p class="hint">Puoi scegliere più PDF insieme: vengono uniti in uno solo, in ordine di nome.</p>
@@ -103,6 +106,9 @@ textarea{height:16rem;font-family:'Space Mono',monospace;font-size:.85rem;margin
     <div class="cap"><span>Strumento</span><span>Da pag.</span><span>A pag.</span><span></span></div>
     <div id="rows"></div>
     <button id="add" type="button">Aggiungi parte</button>
+    <label class="ppp" for="npar">Quante <input id="npar" type="number" min="1" value="1" aria-label="Quante parti aggiungere"></label>
+    <label class="ppp" for="ppp">Pagine per parte <input id="ppp" type="number" min="1" value="1" aria-label="Pagine per ogni nuova parte"></label>
+    <span id="addmsg" class="hint" role="status"></span>
     <datalist id="dl"></datalist>
 
     <h2 style="margin-top:1.5rem">File che verranno creati</h2>
@@ -218,7 +224,31 @@ function draw() {
 }
 $('#rows').addEventListener('input', e => { const t = e.target, i = +t.dataset.i; rows[i][t.dataset.f] = t.dataset.f === 'n' ? t.value.trim() : +t.value; sum(); });
 $('#rows').addEventListener('click', e => { if (e.target.dataset.del !== undefined) { rows.splice(+e.target.dataset.del, 1); if (!rows.length) rows.push({n: '', a: 1, b: 1}); draw(); } });
-$('#add').onclick = () => { const l = rows[rows.length - 1], s = l && l.b ? l.b + 1 : 1; rows.push({n: '', a: s, b: s}); draw(); };
+// Pagine per parte: ogni nuova riga parte già con quel numero di pagine (si ricorda anche la volta dopo)
+try { const v = +localStorage.getItem('pagPerParte'); if (v >= 1) $('#ppp').value = v; } catch (e) {}
+const ppp = () => Math.max(1, Math.floor(+$('#ppp').value) || 1);
+$('#ppp').onchange = () => { $('#ppp').value = ppp(); try { localStorage.setItem('pagPerParte', ppp()); } catch (e) {} };
+const npar = () => Math.max(1, Math.floor(+$('#npar').value) || 1);
+$('#npar').oninput = () => { const n = npar(); $('#add').textContent = n === 1 ? 'Aggiungi parte' : `Aggiungi ${n} parti`; };
+// Aggiunge n righe di colpo, ognuna con le pagine di default e a partire dall'ultima pagina usata; si ferma alla fine del PDF
+function addRows(n) {
+  if (rows.length === 1 && !rows[0].n && rows[0].a === 1 && rows[0].b === 1) rows = []; // la riga vuota iniziale non serve più
+  let fatte = 0;
+  for (let k = 0; k < n; k++) {
+    const l = rows[rows.length - 1], s = l && l.b ? l.b + 1 : 1;
+    if (total > 0 && s > total) break;
+    rows.push({n: '', a: s, b: total > 0 ? Math.max(s, Math.min(s + ppp() - 1, total)) : s + ppp() - 1}); fatte++;
+  }
+  draw();
+  $('#addmsg').textContent = fatte < n ? (fatte ? `Il PDF finisce a pag. ${total}: aggiunte ${fatte} righe.` : `Il PDF finisce a pag. ${total}: non ci sono altre pagine.`) : '';
+  const campo = document.querySelector(`#rows input[data-i="${rows.length - fatte}"][data-f="n"]`); if (fatte && campo) campo.focus();
+}
+$('#add').onclick = () => addRows(npar());
+// Invio sul nome dello strumento: aggiunge subito la riga successiva, già con le pagine di default
+$('#rows').addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || e.target.dataset.f !== 'n' || +e.target.dataset.i !== rows.length - 1 || !e.target.value.trim()) return;
+  e.preventDefault(); addRows(1);
+});
 $('#tit').oninput = () => sum();
 
 // Piano dei file: riordino secondo l'ordine classico e numerazione progressiva
@@ -440,7 +470,7 @@ $('#go').onclick = async () => {
 
 fillList(); draw();
 </script>
-<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F10</p>
+<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F12</p>
 <script>document.getElementById('ver').textContent += ' · regole: ' + (window.Regole && Regole.build ? Regole.build : 'vecchie o non caricate');</script>
 </body>
 </html>
