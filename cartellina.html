@@ -73,7 +73,7 @@ a.dl{display:inline-block;margin-top:.75rem;font-weight:600;color:var(--navy)}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="regole.js?v=13"></script>
+<script src="regole.js?v=14"></script>
 <script>
 const CFG = {
   CLIENT_ID: '461215269916-tcd8cfsa5m951ohohibf4f8635tdgolp.apps.googleusercontent.com',
@@ -153,18 +153,8 @@ async function partsOf(b) {
   const r = await g(`${API}&pageSize=200&orderBy=name&fields=files(id,name)&q=${encodeURIComponent(q)}`);
   return r.files.map(f => ({id: f.id, ...Regole.parseFile(f.name, b.name)})).filter(p => p.kind === 'part').map(p => ({id: p.id, num: p.num, name: p.name}));
 }
-// Due parti A5 per foglio A4, nell'ordine in cui arrivano
-function sheets(out, cells) {
-  for (let i = 0; i < cells.length; i += 2) {
-    const land = cells[i].height >= cells[i].width, W = land ? 841.89 : 595.28, H = land ? 595.28 : 841.89;
-    const pg = out.addPage([W, H]), cw = land ? W / 2 : W, ch = land ? H : H / 2;
-    [cells[i], cells[i + 1]].forEach((e, j) => {
-      if (!e) return;
-      const s = Math.min(cw / e.width, ch / e.height), w = e.width * s, h = e.height * s;
-      pg.drawPage(e, {x: land ? j * cw + (cw - w) / 2 : (cw - w) / 2, y: land ? (ch - h) / 2 : (j === 0 ? ch : 0) + (ch - h) / 2, width: w, height: h});
-    });
-  }
-}
+// Due parti A5 per foglio A4, nell'ordine in cui arrivano (le pagine grandi restano una per foglio)
+const sheets = (out, cells) => Regole.sheets(out, cells);
 
 // ---- Un pannello (cartellina o libretto): elenco salvato + PDF per strumento ----
 function setup(p) {
@@ -276,7 +266,7 @@ async function start() {
   } catch (err) { PANELS.forEach(p => p.msg('Errore: ' + err.message, true)); }
 }
 </script>
-<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F9</p>
+<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F15</p>
 <script>document.getElementById('ver').textContent += ' · regole: ' + (window.Regole && Regole.build ? Regole.build : 'vecchie o non caricate');</script>
 </body>
 </html>
