@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ritaglia le parti · pagina provvisoria</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Karla:wght@400;600&family=Piazzolla:wght@500;700&family=Space+Mono&display=swap">
+<style>
+:root{--navy:#1E1937;--orange:#EF7135;--green:#008367;--wine:#620E1C;--cream:#F6E1C9;--gold:#F0BC0F;--sage:#7EA681;--sky:#BBDEF5;--ink:#1C1C1F}
+*{box-sizing:border-box}
+body{margin:0;background:var(--cream);color:var(--ink);font:16px/1.55 Karla,sans-serif}
+h1,h2{font-family:Piazzolla,serif;margin:0;font-weight:700;color:var(--navy)}
+h1{font-size:clamp(2rem,5vw,3rem);color:var(--cream);line-height:1.1}
+h2{font-size:1.5rem}
+header{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;padding:.9rem clamp(1rem,4vw,3rem);background:#fff;border-bottom:4px solid var(--orange)}
+.logo{display:block;height:48px;width:auto;max-width:100%}
+.acc{display:flex;align-items:center;gap:.75rem}
+.nav{display:flex;gap:.25rem 1.25rem;flex-wrap:wrap}
+.nav a{white-space:nowrap;color:var(--navy);font-weight:600;text-decoration:none;padding:.25rem 0;border-bottom:3px solid transparent}
+.nav a[aria-current]{border-bottom-color:var(--orange)}
+.nav a:hover{border-bottom-color:var(--sage)}
+#st{padding:.2rem .7rem;border-radius:999px;background:var(--sky);color:var(--navy);font-family:'Space Mono',monospace;font-size:.85rem}
+#st.on{background:var(--green);color:#fff}
+.band{background:var(--navy);padding:2rem clamp(1rem,4vw,3rem) 2.25rem}
+.band p{margin:.4rem 0 0;color:var(--cream);font-size:1.1rem}
+main{padding:1.5rem clamp(1rem,4vw,3rem) 3rem}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;align-items:start}
+@media(max-width:900px){.cols{grid-template-columns:1fr}}
+section{background:#fff;border-radius:12px;padding:1.25rem;border-top:6px solid var(--navy)}
+section.sf{border-top-color:var(--orange)}
+.head{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;margin-bottom:.75rem}
+.tot{font-family:'Space Mono',monospace;font-size:.85rem}
+input,button{font:inherit;color:inherit}
+input[type=text]{padding:.5rem .6rem;border:1px solid var(--navy);border-radius:6px;background:#fff;color:var(--ink);max-width:100%}
+input:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+button{cursor:pointer;border:2px solid var(--navy);background:#fff;color:var(--navy);padding:.5rem 1rem;border-radius:999px;font-weight:600}
+button:hover:not(:disabled){background:var(--sky)}
+button.main{background:var(--orange);border-color:var(--orange)}
+button.main:hover:not(:disabled){background:var(--gold);border-color:var(--gold)}
+button:disabled{background:var(--cream);border-color:var(--cream);cursor:not-allowed}
+[hidden]{display:none!important}
+ol{list-style:none;margin:0;padding:0}
+li.r{display:flex;align-items:center;gap:.6rem;padding:.4rem .5rem;margin:.25rem 0;border:1px solid var(--sage);border-radius:10px;background:#fff}
+li.r.dragging{opacity:.4}
+li.r.over{background:var(--sky)}
+.grip{cursor:grab;color:var(--sage);font-size:1.2rem;line-height:1;user-select:none}
+.nm{flex:1;font-weight:600;color:var(--navy)}
+.st{display:flex;align-items:center;gap:.25rem}
+.st button{padding:0;width:2rem;height:2rem;border-width:1px;font-size:1.1rem;line-height:1}
+.st input{width:3.2rem;text-align:center;font-family:'Space Mono',monospace;padding:.3rem;border:1px solid var(--navy);border-radius:6px}
+.act button{padding:.15rem .55rem;border-width:1px;margin-left:.2rem}
+.add{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.9rem}
+.add input{flex:1;min-width:10rem}
+.hint{font-size:.9rem;margin:.25rem 0 1rem}
+.warn{color:var(--wine);font-weight:600}
+.savebar{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin:1.25rem 0}
+details{background:#fff;border-radius:12px;padding:.9rem 1.25rem}
+summary{cursor:pointer;font-weight:600;color:var(--navy)}
+details button{margin:.25rem .25rem .25rem 0}
+.mono{font-family:'Space Mono',monospace;font-size:.85rem}
+.wide{max-width:70rem}
+select{padding:.5rem .6rem;border:1px solid var(--navy);border-radius:6px;background:#fff;color:var(--ink);font:inherit;max-width:100%}
+.bar{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin:.5rem 0}
+.bar input[type=text]{flex:1;min-width:14rem}
+.inc{display:flex;align-items:center;gap:.5rem;margin:.25rem 0;font-weight:400;color:var(--ink)}
+.inc input{width:auto}
+.inc small{font-family:'Space Mono',monospace;font-size:.8rem}
+.cols2{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:1.25rem;align-items:start}
+@media(max-width:860px){.cols2{grid-template-columns:1fr}}
+.cutwrap{position:relative;display:inline-block;line-height:0;touch-action:none;border:1px solid var(--navy);background:#fff}
+.cutwrap canvas{display:block}
+#prevcv{border:1px solid var(--navy);background:#fff;max-width:100%}
+.abox{position:absolute;box-sizing:border-box;border:3px solid var(--orange);cursor:move;touch-action:none}
+.hdl{position:absolute;width:16px;height:16px;box-sizing:border-box;background:var(--navy);border:2px solid var(--cream);border-radius:3px;z-index:2}
+.hdl[data-c=tl]{left:-9px;top:-9px;cursor:nwse-resize}
+.hdl[data-c=br]{right:-9px;bottom:-9px;cursor:nwse-resize}
+.hdl[data-c=tr]{right:-9px;top:-9px;cursor:nesw-resize}
+.hdl[data-c=bl]{left:-9px;bottom:-9px;cursor:nesw-resize}
+pre{white-space:pre-wrap;font-family:'Space Mono',monospace;font-size:.85rem;margin:.75rem 0 0}
+</style>
+</head>
+<body>
+<header>
+  <a href="https://www.corpomusicalegverdi.it/"><img class="logo" src="https://www.corpomusicalegverdi.it/wp-content/uploads/2026/01/Marchio-Ufficiale-Orizzontale.svg" alt="Corpo Musicale “G. Verdi” di Venaria Reale"></a>
+  <nav class="nav"><a href="archivio.html">Archivio</a><a href="divisione.html">Aggiungi brano</a><a href="stampa.html">Stampa brano</a><a href="cartellina.html">Crea per strumento</a><a href="organico.html">Organico</a><a href="ordine.html">Ordine parti</a><a href="sistema.html">Controllo</a></nav>
+  <div class="acc"><span id="st">Non connesso</span><button id="login">Accedi con Google</button></div>
+</header>
+<div class="band"><h1>Ritaglia le parti</h1><p>Pagina provvisoria e nascosta: da A4 mezzo vuoto ad A5, per tutti i file di un brano</p></div>
+
+<main class="wide">
+  <p class="hint">Serve per le parti già divise in cui ogni file è un A4 con il contenuto in una sola metà. Scegli il brano, metti il riquadro A5 sulla metà piena (vale per tutti i file) e premi «Ritaglia»: ogni file viene sostituito con lo <b>stesso nome</b> e la metà vuota sparisce. Il Drive conserva comunque la versione precedente di ogni file («Gestisci versioni»).</p>
+  <section>
+    <h2>1. Brano</h2>
+    <div class="bar"><input type="text" id="bq" list="dlb" placeholder="Titolo del brano" aria-label="Titolo del brano"><button id="load" disabled>Carica i file</button></div>
+    <datalist id="dlb"></datalist>
+    <p id="smsg" class="mono">Accedi con Google per iniziare.</p>
+    <div id="fl"></div>
+  </section>
+  <section id="s2" hidden>
+    <h2>2. Riquadro</h2>
+    <div class="bar"><label for="dir">Direzione</label><select id="dir"><option value="auto">Automatica</option><option value="lr">Contenuto a sinistra o a destra</option><option value="tb">Contenuto in alto o in basso</option></select>
+      <button type="button" id="h1"></button><button type="button" id="h2"></button>
+      <label for="bsz">Dimensione <input id="bsz" type="range" min="30" max="100" value="100" style="width:8rem"> <span id="bszv" class="mono">100%</span></label></div>
+    <p class="hint">Vedi tutti i fogli sovrapposti. Trascina il riquadro arancione sulla metà piena; con le maniglie agli angoli lo ridimensioni mantenendo le proporzioni A5.</p>
+    <div class="cols2">
+      <div><div class="cutwrap" id="cutwrap"><canvas id="cutcv" aria-label="Fogli sovrapposti"></canvas></div><p id="cutmsg" class="mono"></p></div>
+      <div><h2 style="font-size:1.1rem">Come verrà il primo file</h2><canvas id="prevcv" aria-label="Anteprima del primo file"></canvas><p id="prevmsg" class="mono"></p></div>
+    </div>
+  </section>
+  <section id="s3" hidden>
+    <h2>3. Ritaglia</h2>
+    <label class="inc"><input type="checkbox" id="force"> Ritaglia anche i file che hanno contenuto fuori dal riquadro (di norma vengono saltati, per non perdere niente)</label>
+    <p><button id="go" class="main">Ritaglia e sostituisci i file</button></p>
+    <pre id="log"></pre>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="regole.js?v=14"></script>
+<script>
+const CFG = {
+  CLIENT_ID: '461215269916-tcd8cfsa5m951ohohibf4f8635tdgolp.apps.googleusercontent.com',
+  FOLDERS: {concerto: '1wWMSp-kyX2K6Kk1hJfuv3gISgkoQBX4V', marce: '1M0-uSG4jsO-P6SG-MY1MoNd_aAppM8Dp'}
+};
+const $ = s => document.querySelector(s), low = s => s.toLowerCase().trim();
+const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const cap = s => s.replace(/\b\w/g, c => c.toUpperCase()).replace(/ In /g, ' in ');
+const API = 'https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives';
+const KS = ['concerto', 'marce'], toText = a => a.map(x => `${x.n} ${x.role}`).join('\n');
+let tok, org = {concerto: [], marce: []}, saved = null, isDirty = false, loaded = false;
+const msg = (t, warn) => { $('#smsg').textContent = t; $('#smsg').className = 'mono' + (warn ? ' warn' : ''); };
+
+// ---- Accesso (la sessione è condivisa con le altre pagine) ----
+const SS = {
+  get: k => { try { return sessionStorage.getItem(k); } catch (e) { return null; } },
+  set: (k, v) => { try { sessionStorage.setItem(k, v); } catch (e) {} },
+  del: k => { try { sessionStorage.removeItem(k); } catch (e) {} }
+};
+function connected(name) { $('#st').textContent = name ? 'Ciao ' + name : 'Connesso'; $('#st').className = 'on'; $('#login').hidden = true; start(); }
+function expired() { tok = null; SS.del('sess'); $('#st').textContent = 'Sessione scaduta'; $('#st').className = ''; $('#login').hidden = false; }
+$('#login').onclick = () => {
+  if (!window.google) { $('#st').textContent = 'Servizio Google non raggiungibile'; return; }
+  google.accounts.oauth2.initTokenClient({
+    client_id: CFG.CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive openid profile', hd: 'corpomusicalegverdi.it',
+    callback: async r => {
+      if (!r.access_token) return;
+      tok = r.access_token; let name = '';
+      try { const u = await g('https://www.googleapis.com/oauth2/v3/userinfo'); name = u.given_name || u.name || ''; } catch (e) {}
+      SS.set('sess', JSON.stringify({t: tok, n: name, e: Date.now() + ((Number(r.expires_in) || 3600) - 120) * 1000}));
+      connected(name);
+    }
+  }).requestAccessToken();
+};
+async function raw(url, opt = {}) {
+  const r = await Regole.fetchRetry(url, {...opt, headers: {...(opt.headers || {}), Authorization: 'Bearer ' + tok}});
+  if (r.status === 401) { expired(); throw new Error('Sessione scaduta: accedi di nuovo con Google.'); }
+  if (!r.ok) throw new Error(await r.text());
+  return r;
+}
+const g = async (u, o) => (await raw(u, o)).json();
+const gb = async u => (await raw(u)).arrayBuffer();
+try { const s0 = JSON.parse(SS.get('sess')); if (s0 && s0.e > Date.now()) { tok = s0.t; window.addEventListener('load', () => connected(s0.n)); } } catch (e) {}
+
+// ---- File di configurazione sul Drive (con copia di sicurezza su GitHub in dati/) ----
+const CF = {}; let parent;
+async function parentId() {
+  if (!parent) parent = (await g(`https://www.googleapis.com/drive/v3/files/${CFG.FOLDERS.concerto}?fields=parents&supportsAllDrives=true`)).parents[0];
+  return parent;
+}
+async function backup(name) { try { const x = await fetch('dati/' + name); if (x.ok) return await x.json(); } catch (e) {} return null; }
+async function loadCfg(name) {
+  const q = `'${await parentId()}' in parents and name='${name}' and trashed=false`;
+  const r = await g(`${API}&fields=files(id)&q=${encodeURIComponent(q)}`);
+  if (!r.files.length) return backup(name);
+  CF[name] = r.files[0].id;
+  return g(`https://www.googleapis.com/drive/v3/files/${CF[name]}?alt=media&supportsAllDrives=true`);
+}
+async function saveCfg(name, obj) {
+  const body = JSON.stringify(obj);
+  if (CF[name]) return g(`https://www.googleapis.com/upload/drive/v3/files/${CF[name]}?uploadType=media&supportsAllDrives=true`, {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body});
+  const f = new FormData();
+  f.append('metadata', new Blob([JSON.stringify({name, parents: [await parentId()]})], {type: 'application/json'}));
+  f.append('file', new Blob([body], {type: 'application/json'}));
+  CF[name] = (await g('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id', {method: 'POST', body: f})).id;
+}
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+const A5 = {w: 148 / 25.4 * 72, h: 210 / 25.4 * 72};
+const defPos = dir => dir === 'lr' ? {x: .25, y: .5} : {x: .5, y: .25};
+let cfg = {dir: 'lr', pos: defPos('lr'), pct: 100}, brani = [], files = [], cutDim = {w: 1, h: 1}, tdeb = null, busy = false;
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+// Riquadro con le proporzioni esatte di un A5; pct = % rispetto alla metà del foglio
+function boxDims(w, h, dir, pct) {
+  const ar = dir === 'lr' ? A5.w / A5.h : A5.h / A5.w, Hd = dir === 'lr' ? Math.min(h, (w / 2) / ar) : Math.min(h / 2, w / ar);
+  const H = Hd * Math.min(pct / 100, h / Hd, w / (Hd * ar)); return {W: H * ar, H};
+}
+// Il riquadro su una pagina: coordinate PDF, frazioni (dall'alto) e lato
+function boxFor(p) {
+  const b = p.getMediaBox(), w = b.width, h = b.height, sel = $('#dir').value, side = sel === 'auto' ? (w >= h ? 'lr' : 'tb') : sel;
+  const {W, H} = boxDims(w, h, side, cfg.pct), pos = side === cfg.dir ? cfg.pos : defPos(side);
+  const left = clamp(b.x + pos.x * w - W / 2, b.x, b.x + w - W), bottom = clamp(b.y + h - pos.y * h - H / 2, b.y, b.y + h - H);
+  return {side, left, bottom, W, H, fr: {x0: (left - b.x) / w, x1: (left + W - b.x) / w, y0: (b.y + h - bottom - H) / h, y1: (b.y + h - bottom) / h}};
+}
+const sel = () => files.filter(f => f.on);
+const pdfjsDoc = f => pdfjsLib.getDocument({data: new Uint8Array(f.bytes.slice(0))}).promise;
+
+// ---- Avvio e scelta del brano ----
+async function start() {
+  msg('Carico i brani…');
+  try {
+    brani = [];
+    for (const k of Object.keys(CFG.FOLDERS)) {
+      let pt = '';
+      do {
+        const q = `'${CFG.FOLDERS[k]}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+        const r = await g(`${API}&pageSize=1000&orderBy=name&fields=nextPageToken,files(id,name)&q=${encodeURIComponent(q)}${pt ? '&pageToken=' + encodeURIComponent(pt) : ''}`);
+        r.files.forEach(f => brani.push({...f, k})); pt = r.nextPageToken;
+      } while (pt);
+    }
+    brani.sort((a, b) => a.name.localeCompare(b.name, 'it'));
+    $('#dlb').innerHTML = brani.map(b => `<option value="${esc(b.name)}">`).join('');
+    $('#load').disabled = false; msg(brani.length + ' brani. Scegli quello da ritagliare.');
+  } catch (e) { msg('Errore: ' + e.message, true); }
+}
+$('#load').onclick = async () => {
+  const b = brani.find(x => low(x.name) === low($('#bq').value)); if (!b) { msg('Scegli un brano dall’elenco.', true); return; }
+  $('#load').disabled = true; files = []; $('#s2').hidden = $('#s3').hidden = true;
+  try {
+    const q = `'${b.id}' in parents and trashed=false`;
+    const r = await g(`${API}&pageSize=200&orderBy=name&fields=files(id,name)&q=${encodeURIComponent(q)}`);
+    const parts = r.files.map(f => ({f, ...Regole.parseFile(f.name, b.name)})).filter(x => x.kind === 'part');
+    if (!parts.length) { msg('Non trovo parti numerate in questo brano.', true); $('#load').disabled = false; return; }
+    for (let i = 0; i < parts.length; i++) {
+      msg(`Scarico ${i + 1} di ${parts.length}: ${parts[i].f.name}`);
+      const bytes = await gb(`https://www.googleapis.com/drive/v3/files/${parts[i].f.id}?alt=media&supportsAllDrives=true`);
+      const d = await PDFLib.PDFDocument.load(bytes, {ignoreEncryption: true});
+      files.push({id: parts[i].f.id, name: parts[i].f.name, bytes, pages: d.getPageCount(), on: true});
+    }
+    $('#fl').innerHTML = files.map((f, i) => `<label class="inc"><input type="checkbox" class="fc" data-i="${i}" checked> ${esc(f.name)} <small>${f.pages} pag.</small></label>`).join('');
+    msg(files.length + ' file pronti.'); $('#s2').hidden = $('#s3').hidden = false;
+    cfg = {dir: 'lr', pos: defPos('lr'), pct: 100}; $('#bsz').value = 100; $('#bszv').textContent = '100%';
+    await renderCut();
+  } catch (e) { msg('Errore: ' + e.message, true); }
+  $('#load').disabled = false;
+};
+$('#fl').addEventListener('change', e => { if (e.target.classList.contains('fc')) { files[+e.target.dataset.i].on = e.target.checked; renderCut().catch(() => {}); } });
+
+// ---- Fogli sovrapposti con il riquadro ----
+function drawBox() {
+  const bd = boxDims(cutDim.w, cutDim.h, cfg.dir, cfg.pct), bw = bd.W / cutDim.w, bh = bd.H / cutDim.h;
+  cfg.pos = {x: clamp(cfg.pos.x, bw / 2, 1 - bw / 2), y: clamp(cfg.pos.y, bh / 2, 1 - bh / 2)};
+  let el = document.getElementById('abox');
+  if (!el) { el = document.createElement('div'); el.id = 'abox'; el.className = 'abox'; el.innerHTML = ['tl', 'tr', 'bl', 'br'].map(c => `<i class="hdl" data-c="${c}"></i>`).join(''); $('#cutwrap').appendChild(el); }
+  el.style.left = (cfg.pos.x - bw / 2) * 100 + '%'; el.style.top = (cfg.pos.y - bh / 2) * 100 + '%'; el.style.width = bw * 100 + '%'; el.style.height = bh * 100 + '%';
+  const alto = cfg.dir === 'tb'; $('#h1').textContent = alto ? 'Metà alta' : 'Metà sinistra'; $('#h2').textContent = alto ? 'Metà bassa' : 'Metà destra';
+}
+async function renderCut() {
+  const fs = sel(); if (!fs.length) { $('#cutmsg').textContent = 'Spunta almeno un file.'; return; }
+  $('#cutmsg').textContent = 'Preparo i fogli…';
+  const docs = []; for (const f of fs) docs.push(await pdfjsDoc(f));
+  const v0 = (await docs[0].getPage(1)).getViewport({scale: 1}), s = $('#dir').value, dirNow = s === 'auto' ? (v0.width >= v0.height ? 'lr' : 'tb') : s;
+  if (cfg.dir !== dirNow) cfg = {dir: dirNow, pos: defPos(dirNow), pct: cfg.pct};
+  cutDim = {w: v0.width, h: v0.height};
+  const dpr = Math.min(2, window.devicePixelRatio || 1), availW = Math.max(240, Math.min(560, $('#s2').clientWidth * .6)), availH = Math.max(240, window.innerHeight - 300);
+  const sc = Math.min(availW / v0.width, availH / v0.height), cw = Math.round(v0.width * sc), ch = Math.round(v0.height * sc);
+  const cv = $('#cutcv'), ctx = cv.getContext('2d'), tmp = document.createElement('canvas');
+  cv.width = tmp.width = Math.round(cw * dpr); cv.height = tmp.height = Math.round(ch * dpr); cv.style.width = cw + 'px'; cv.style.height = ch + 'px';
+  ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+  const tctx = tmp.getContext('2d'); let n = 0;
+  for (const doc of docs) for (let i = 1; i <= doc.numPages; i++) {   // "darken": resta visibile ogni segno di ogni pagina
+    const p = await doc.getPage(i), vp = p.getViewport({scale: cv.width / p.getViewport({scale: 1}).width});
+    tctx.fillStyle = '#fff'; tctx.fillRect(0, 0, tmp.width, tmp.height);
+    await p.render({canvasContext: tctx, viewport: vp}).promise; ctx.globalCompositeOperation = 'darken'; ctx.drawImage(tmp, 0, 0); n++;
+  }
+  ctx.globalCompositeOperation = 'source-over'; drawBox(); $('#cutmsg').textContent = n + ' pagine sovrapposte.'; renderPrev().catch(() => {});
+}
+async function renderPrev() {
+  const f = sel()[0]; if (!f) return;
+  const doc = await pdfjsDoc(f), p = await doc.getPage(1), v1 = p.getViewport({scale: 1}), s = $('#dir').value, side = s === 'auto' ? (v1.width >= v1.height ? 'lr' : 'tb') : s;
+  const bd = boxDims(v1.width, v1.height, side, cfg.pct), pos = side === cfg.dir ? cfg.pos : defPos(side), sc = 1.6;
+  const tmp = document.createElement('canvas'), vp = p.getViewport({scale: sc}); tmp.width = vp.width; tmp.height = vp.height;
+  const tctx = tmp.getContext('2d'); tctx.fillStyle = '#fff'; tctx.fillRect(0, 0, tmp.width, tmp.height); await p.render({canvasContext: tctx, viewport: vp}).promise;
+  const sx = clamp(pos.x * v1.width - bd.W / 2, 0, v1.width - bd.W) * sc, sy = clamp(pos.y * v1.height - bd.H / 2, 0, v1.height - bd.H) * sc, sw = bd.W * sc, sh = bd.H * sc;
+  const cv = $('#prevcv'); cv.width = Math.round(sw); cv.height = Math.round(sh); cv.getContext('2d').drawImage(tmp, sx, sy, sw, sh, 0, 0, cv.width, cv.height);
+  $('#prevmsg').textContent = f.name + ' · pag. 1 · ' + (side === 'lr' ? '148 × 210' : '210 × 148') + ' mm';
+}
+const later = () => { clearTimeout(tdeb); tdeb = setTimeout(() => renderPrev().catch(() => {}), 300); };
+const frac = e => { const r = $('#cutcv').getBoundingClientRect(); return {x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height}; };
+let drag = null;
+$('#cutwrap').addEventListener('pointerdown', e => {
+  const el = e.target.closest('.abox'); if (!el) return; const h = e.target.closest('.hdl'), f = frac(e);
+  if (h) {
+    const bd = boxDims(cutDim.w, cutDim.h, cfg.dir, cfg.pct), bw = bd.W / cutDim.w, bh = bd.H / cutDim.h, right = h.dataset.c.includes('r'), bottom = h.dataset.c.includes('b');
+    drag = {size: true, right, bottom, a: {x: right ? cfg.pos.x - bw / 2 : cfg.pos.x + bw / 2, y: bottom ? cfg.pos.y - bh / 2 : cfg.pos.y + bh / 2}};
+  } else drag = {dx: f.x - cfg.pos.x, dy: f.y - cfg.pos.y};
+  e.currentTarget.setPointerCapture(e.pointerId); e.preventDefault();
+});
+$('#cutwrap').addEventListener('pointermove', e => {
+  if (!drag) return; const f = frac(e);
+  if (drag.size) {
+    const d100 = boxDims(cutDim.w, cutDim.h, cfg.dir, 100);
+    cfg.pct = Math.round(clamp(Math.max(Math.abs(f.x - drag.a.x) * cutDim.w / d100.W, Math.abs(f.y - drag.a.y) * cutDim.h / d100.H) * 100, 30, 100));
+    const bd = boxDims(cutDim.w, cutDim.h, cfg.dir, cfg.pct), bw = bd.W / cutDim.w, bh = bd.H / cutDim.h;
+    cfg.pos = {x: drag.right ? drag.a.x + bw / 2 : drag.a.x - bw / 2, y: drag.bottom ? drag.a.y + bh / 2 : drag.a.y - bh / 2};
+    $('#bsz').value = cfg.pct; $('#bszv').textContent = cfg.pct + '%';
+  } else cfg.pos = {x: f.x - drag.dx, y: f.y - drag.dy};
+  drawBox();
+});
+$('#cutwrap').addEventListener('pointerup', () => { if (drag) { drag = null; later(); } });
+$('#bsz').oninput = () => { cfg.pct = +$('#bsz').value; $('#bszv').textContent = cfg.pct + '%'; drawBox(); later(); };
+$('#h1').onclick = () => { cfg.pos = defPos(cfg.dir); drawBox(); later(); };
+$('#h2').onclick = () => { cfg.pos = cfg.dir === 'tb' ? {x: .5, y: .75} : {x: .75, y: .5}; drawBox(); later(); };
+$('#dir').onchange = () => renderCut().catch(() => {});
+
+// ---- Ritaglio e sostituzione ----
+// Quanto "inchiostro" c'è fuori dal riquadro (ignorando i bordi della scansione)
+async function inkOutside(f, srcDoc) {
+  const doc = await pdfjsDoc(f), found = [];
+  for (let i = 0; i < doc.numPages; i++) {
+    const p = await doc.getPage(i + 1), bx = boxFor(srcDoc.getPage(i)).fr, vp = p.getViewport({scale: 200 / p.getViewport({scale: 1}).width});
+    const cv = document.createElement('canvas'); cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+    const ctx = cv.getContext('2d', {willReadFrequently: true}); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+    await p.render({canvasContext: ctx, viewport: vp}).promise;
+    const d = ctx.getImageData(0, 0, cv.width, cv.height).data; let dark = 0, tot = 0;
+    for (let y = 0; y < cv.height; y++) for (let x = 0; x < cv.width; x++) {
+      const fx = x / cv.width, fy = y / cv.height;
+      if (fx < .02 || fx > .98 || fy < .02 || fy > .98 || (fx >= bx.x0 && fx <= bx.x1 && fy >= bx.y0 && fy <= bx.y1)) continue;
+      tot++; const k = 4 * (y * cv.width + x); if (d[k] * .3 + d[k + 1] * .59 + d[k + 2] * .11 < 140) dark++;
+    }
+    if (tot && dark / tot > .005) found.push(i + 1);
+  }
+  return found;
+}
+async function cropFile(bytes) {
+  const src = await PDFLib.PDFDocument.load(bytes, {ignoreEncryption: true}), out = await PDFLib.PDFDocument.create();
+  for (const p of src.getPages()) {
+    const bx = boxFor(p), [ow, oh] = bx.side === 'lr' ? [A5.w, A5.h] : [A5.h, A5.w];
+    const e = await out.embedPage(p, {left: bx.left, right: bx.left + bx.W, bottom: bx.bottom, top: bx.bottom + bx.H});
+    out.addPage([ow, oh]).drawPage(e, {x: 0, y: 0, width: ow, height: oh});   // pagina A5 esatta
+  }
+  return out.save();
+}
+$('#go').onclick = async () => {
+  const fs = sel(), log = m => { $('#log').textContent += m + '\n'; }; if (!fs.length || busy) return;
+  if (!confirm(`Sostituisco il contenuto di ${fs.length} file con la versione ritagliata (A5). I nomi restano uguali e il Drive conserva la versione precedente. Procedo?`)) return;
+  busy = true; $('#go').disabled = true; $('#log').textContent = ''; let ok = 0, skip = 0;
+  try {
+    for (const f of fs) {
+      const src = await PDFLib.PDFDocument.load(f.bytes, {ignoreEncryption: true}), fuori = await inkOutside(f, src);
+      if (fuori.length && !$('#force').checked) { log(`⚠ ${f.name}: salto, c'è contenuto fuori dal riquadro (pag. ${fuori.join(', ')})`); skip++; continue; }
+      const nuovo = await cropFile(f.bytes);
+      await g(`https://www.googleapis.com/upload/drive/v3/files/${f.id}?uploadType=media&supportsAllDrives=true`, {method: 'PATCH', headers: {'Content-Type': 'application/pdf'}, body: nuovo});
+      f.bytes = nuovo.slice().buffer; ok++; log(`✓ ${f.name}`);
+    }
+    log(`Fatto: ${ok} file ritagliati${skip ? ', ' + skip + ' saltati' : ''}.`);
+  } catch (e) { log('Errore: ' + e.message); }
+  busy = false; $('#go').disabled = false;
+};
+</script>
+<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F16</p>
+<script>document.getElementById('ver').textContent += ' · regole: ' + (window.Regole && Regole.build ? Regole.build : 'vecchie o non caricate');</script>
+</body>
+</html>
