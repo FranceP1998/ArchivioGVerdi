@@ -84,7 +84,7 @@ details button{margin:.25rem .25rem .25rem 0}
 </main>
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="regole.js?v=13"></script>
+<script src="regole.js?v=15"></script>
 <script>
 const CFG = {
   CONFIG: '1uJBiDObTRveMB0v3jr43iYJEWiBQIfsP', // cartella dei file di configurazione (organico, ordine, cartellina...)
@@ -105,7 +105,7 @@ const SS = {
   set: (k, v) => { try { sessionStorage.setItem(k, v); } catch (e) {} },
   del: k => { try { sessionStorage.removeItem(k); } catch (e) {} }
 };
-function connected(name) { $('#st').textContent = name ? 'Ciao ' + name : 'Connesso'; $('#st').className = 'on'; $('#login').hidden = true; start(); }
+function connected(name) { $('#st').textContent = name ? 'Ciao ' + name : 'Connesso'; $('#st').className = 'on'; $('#login').hidden = true; Regole.initSezione(CFG, g).then(start).catch(Regole.fatal); }
 function expired() { tok = null; SS.del('sess'); $('#st').textContent = 'Sessione scaduta'; $('#st').className = ''; $('#login').hidden = false; }
 $('#login').onclick = () => {
   if (!window.google) { $('#st').textContent = 'Servizio Google non raggiungibile'; return; }
@@ -136,7 +136,7 @@ async function parentId() {
   return parent;
 }
 async function backup(name) { try { const x = await fetch('dati/' + name); if (x.ok) return await x.json(); } catch (e) {} return null; }
-async function loadCfg(name) {
+async function loadCfg0(name) {
   const q = `'${await parentId()}' in parents and name='${name}' and trashed=false`;
   const r = await g(`${API}&fields=files(id)&q=${encodeURIComponent(q)}`);
   if (!r.files.length) {
@@ -151,7 +151,7 @@ async function loadCfg(name) {
   CF[name] = r.files[0].id;
   return g(`https://www.googleapis.com/drive/v3/files/${CF[name]}?alt=media&supportsAllDrives=true`);
 }
-async function saveCfg(name, obj) {
+async function saveCfg0(name, obj) {
   const body = JSON.stringify(obj);
   if (CF[name]) return g(`https://www.googleapis.com/upload/drive/v3/files/${CF[name]}?uploadType=media&supportsAllDrives=true`, {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body});
   const f = new FormData();
@@ -159,6 +159,12 @@ async function saveCfg(name, obj) {
   f.append('file', new Blob([body], {type: 'application/json'}));
   CF[name] = (await g('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id', {method: 'POST', body: f})).id;
 }
+// Musica d'insieme: file con prefisso "insieme-"; l'ordine, se non ce n'è uno suo, parte da quello della banda
+async function loadCfg(name) {
+  const n = Regole.cfgName(name), r = await loadCfg0(n);
+  return r == null && n !== name && name === 'ordine-strumenti.json' ? loadCfg0(name) : r;
+}
+const saveCfg = (name, obj) => saveCfg0(Regole.cfgName(name), obj);
 
 // ---- Suggerimenti: gli strumenti dell'ordine classico, senza combinazioni e tonalità ----
 const BASE = ['ottavino', 'flauto 1', 'flauto 2', 'oboe', 'corno inglese', 'fagotto', 'clarinetto in eb', 'clarinetto 1', 'clarinetto 2', 'clarinetto 3', 'clarinetto basso', 'sax soprano', 'sax contralto 1', 'sax contralto 2', 'sax tenore', 'sax baritono', 'flicorno', 'cornetta', 'tromba 1', 'tromba 2', 'tromba 3', 'corno 1', 'corno 2', 'corno 3', 'corno 4', 'eufonio', 'trombone 1', 'trombone 2', 'trombone 3', 'trombone basso', 'tuba', 'contrabbasso', 'pianoforte'];
@@ -175,7 +181,7 @@ function sugg(L) {
 async function start() {
   msg('Carico l’organico…');
   try {
-    const o = (await loadCfg('organico.json')) || Regole.ORG0, L = await loadCfg('ordine-strumenti.json');
+    const o = (await loadCfg('organico.json')) || Regole.orgDefault(), L = await loadCfg('ordine-strumenti.json');
     org = {concerto: Regole.parseOrg(o.concerto || ''), marce: Regole.parseOrg(o.marce || '')};
     saved = {concerto: toText(org.concerto), marce: toText(org.marce)};
     $('#sg').innerHTML = sugg(Array.isArray(L) ? L : null).map(s => `<option value="${esc(s)}">`).join('');
@@ -244,8 +250,11 @@ $('#save').onclick = async () => {
   } catch (e) { msg('Non sono riuscito a salvare: ' + e.message, true); $('#save').disabled = false; }
 };
 render();
+if (Regole.sez.ins) {   // musica d'insieme: un solo organico
+  $('#o-marce').closest('section').hidden = true; document.querySelector('.cols section h2').textContent = 'Organico'; document.querySelector('.cols').style.gridTemplateColumns = 'minmax(0, 40rem)';
+}
 </script>
-<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F17</p>
+<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F18</p>
 <script>document.getElementById('ver').textContent += ' · regole: ' + (window.Regole && Regole.build ? Regole.build : 'vecchie o non caricate');</script>
 </body>
 </html>

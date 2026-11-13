@@ -73,7 +73,7 @@ a.dl{display:inline-block;margin-top:.75rem;font-weight:600;color:var(--navy)}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="regole.js?v=14"></script>
+<script src="regole.js?v=15"></script>
 <script>
 const CFG = {
   CONFIG: '1uJBiDObTRveMB0v3jr43iYJEWiBQIfsP', // cartella dei file di configurazione (organico, ordine, cartellina...)
@@ -81,6 +81,7 @@ const CFG = {
   FOLDERS: {concerto: '1wWMSp-kyX2K6Kk1hJfuv3gISgkoQBX4V', marce: '1M0-uSG4jsO-P6SG-MY1MoNd_aAppM8Dp'}
 };
 const LBL = {concerto: 'Brani da concerto', marce: 'Marce'};
+if (Regole.sez.ins) LBL.concerto = 'Musica d’insieme';
 // La cartellina è per i concerti (brani da concerto, a volte qualche marcia); il libretto è per le sfilate (solo marce)
 const PANELS = [
   {k: 'c', title: 'Cartellina', sub: 'per i concerti · organico da concerto', file: 'cartellina.json', org: 'concerto', allow: ['concerto', 'marce']},
@@ -98,7 +99,7 @@ const SS = {
   set: (k, v) => { try { sessionStorage.setItem(k, v); } catch (e) {} },
   del: k => { try { sessionStorage.removeItem(k); } catch (e) {} }
 };
-function connected(name) { $('#st').textContent = name ? 'Ciao ' + name : 'Connesso'; $('#st').className = 'on'; $('#login').hidden = true; start(); }
+function connected(name) { $('#st').textContent = name ? 'Ciao ' + name : 'Connesso'; $('#st').className = 'on'; $('#login').hidden = true; Regole.initSezione(CFG, g).then(start).catch(Regole.fatal); }
 function expired() { tok = null; SS.del('sess'); $('#st').textContent = 'Sessione scaduta'; $('#st').className = ''; $('#login').hidden = false; }
 $('#login').onclick = () => {
   if (!window.google) { $('#st').textContent = 'Servizio Google non raggiungibile'; return; }
@@ -130,7 +131,7 @@ async function parentId() {
   return parent;
 }
 async function backup(name) { try { const x = await fetch('dati/' + name); if (x.ok) return await x.json(); } catch (e) {} return null; }
-async function loadCfg(name) {
+async function loadCfg0(name) {
   const q = `'${await parentId()}' in parents and name='${name}' and trashed=false`;
   const r = await g(`${API}&fields=files(id)&q=${encodeURIComponent(q)}`);
   if (!r.files.length) {
@@ -145,7 +146,7 @@ async function loadCfg(name) {
   CF[name] = r.files[0].id;
   return g(`https://www.googleapis.com/drive/v3/files/${CF[name]}?alt=media&supportsAllDrives=true`);
 }
-async function saveCfg(name, obj) {
+async function saveCfg0(name, obj) {
   const body = JSON.stringify(obj);
   if (CF[name]) return g(`https://www.googleapis.com/upload/drive/v3/files/${CF[name]}?uploadType=media&supportsAllDrives=true`, {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body});
   const f = new FormData();
@@ -153,6 +154,12 @@ async function saveCfg(name, obj) {
   f.append('file', new Blob([body], {type: 'application/json'}));
   CF[name] = (await g('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id', {method: 'POST', body: f})).id;
 }
+// Musica d'insieme: file con prefisso "insieme-"; l'ordine, se non ce n'è uno suo, parte da quello della banda
+async function loadCfg(name) {
+  const n = Regole.cfgName(name), r = await loadCfg0(n);
+  return r == null && n !== name && name === 'ordine-strumenti.json' ? loadCfg0(name) : r;
+}
+const saveCfg = (name, obj) => saveCfg0(Regole.cfgName(name), obj);
 
 // ---- Brani e parti ----
 const bf = id => brani.find(b => b.id === id);
@@ -253,12 +260,13 @@ function setup(p) {
   };
   p.msg = msg;
 }
+if (Regole.sez.ins) { PANELS.splice(1); document.getElementById('p-l').hidden = true; }   // la musica d'insieme ha solo la cartellina
 PANELS.forEach(setup);
 
 async function start() {
   PANELS.forEach(p => p.msg('Carico i brani…'));
   try {
-    const org = (await loadCfg('organico.json')) || Regole.ORG0, saved = [];
+    const org = (await loadCfg('organico.json')) || Regole.orgDefault(), saved = [];
     for (const p of PANELS) saved.push(await loadCfg(p.file));
     brani = [];
     for (const k of Object.keys(CFG.FOLDERS)) {
@@ -275,7 +283,7 @@ async function start() {
   } catch (err) { PANELS.forEach(p => p.msg('Errore: ' + err.message, true)); }
 }
 </script>
-<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F17</p>
+<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F18</p>
 <script>document.getElementById('ver').textContent += ' · regole: ' + (window.Regole && Regole.build ? Regole.build : 'vecchie o non caricate');</script>
 </body>
 </html>

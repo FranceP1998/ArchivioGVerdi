@@ -86,7 +86,7 @@ select:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
 </main>
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="regole.js?v=13"></script>
+<script src="regole.js?v=15"></script>
 <script>
 const CFG = {
   CONFIG: '1uJBiDObTRveMB0v3jr43iYJEWiBQIfsP', // cartella dei file di configurazione (organico, ordine, cartellina...)
@@ -107,7 +107,7 @@ const SS = {
   set: (k, v) => { try { sessionStorage.setItem(k, v); } catch (e) {} },
   del: k => { try { sessionStorage.removeItem(k); } catch (e) {} }
 };
-function connected(name) { $('#st').textContent = name ? 'Ciao ' + name : 'Connesso'; $('#st').className = 'on'; $('#login').hidden = true; start(); }
+function connected(name) { $('#st').textContent = name ? 'Ciao ' + name : 'Connesso'; $('#st').className = 'on'; $('#login').hidden = true; Regole.initSezione(CFG, g).then(start).catch(Regole.fatal); }
 function expired() { tok = null; SS.del('sess'); $('#st').textContent = 'Sessione scaduta'; $('#st').className = ''; $('#login').hidden = false; }
 $('#login').onclick = () => {
   if (!window.google) { $('#st').textContent = 'Servizio Google non raggiungibile'; return; }
@@ -138,7 +138,7 @@ async function parentId() {
   return parent;
 }
 async function backup(name) { try { const x = await fetch('dati/' + name); if (x.ok) return await x.json(); } catch (e) {} return null; }
-async function loadCfg(name) {
+async function loadCfg0(name) {
   const q = `'${await parentId()}' in parents and name='${name}' and trashed=false`;
   const r = await g(`${API}&fields=files(id)&q=${encodeURIComponent(q)}`);
   if (!r.files.length) {
@@ -153,7 +153,7 @@ async function loadCfg(name) {
   CF[name] = r.files[0].id;
   return g(`https://www.googleapis.com/drive/v3/files/${CF[name]}?alt=media&supportsAllDrives=true`);
 }
-async function saveCfg(name, obj) {
+async function saveCfg0(name, obj) {
   const body = JSON.stringify(obj);
   if (CF[name]) return g(`https://www.googleapis.com/upload/drive/v3/files/${CF[name]}?uploadType=media&supportsAllDrives=true`, {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body});
   const f = new FormData();
@@ -161,6 +161,12 @@ async function saveCfg(name, obj) {
   f.append('file', new Blob([body], {type: 'application/json'}));
   CF[name] = (await g('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id', {method: 'POST', body: f})).id;
 }
+// Musica d'insieme: file con prefisso "insieme-"; l'ordine, se non ce n'è uno suo, parte da quello della banda
+async function loadCfg(name) {
+  const n = Regole.cfgName(name), r = await loadCfg0(n);
+  return r == null && n !== name && name === 'ordine-strumenti.json' ? loadCfg0(name) : r;
+}
+const saveCfg = (name, obj) => saveCfg0(Regole.cfgName(name), obj);
 
 // ---- Elenco predefinito (usato solo se sul Drive non c'è ancora un ordine) ----
 const N = (b, k) => Array.from({length: k}, (_, i) => b + ' ' + (i + 1));
@@ -236,7 +242,7 @@ $('#save').onclick = async () => {
 };
 render();
 </script>
-<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F17</p>
+<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F18</p>
 <script>document.getElementById('ver').textContent += ' · regole: ' + (window.Regole && Regole.build ? Regole.build : 'vecchie o non caricate');</script>
 </body>
 </html>

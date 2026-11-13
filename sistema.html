@@ -106,7 +106,7 @@ pre{white-space:pre-wrap;margin:.75rem 0 0}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="regole.js?v=13"></script>
+<script src="regole.js?v=15"></script>
 <script>
 const CFG = {
   CONFIG: '1uJBiDObTRveMB0v3jr43iYJEWiBQIfsP', // cartella dei file di configurazione (organico, ordine, cartellina...)
@@ -114,6 +114,7 @@ const CFG = {
   FOLDERS: {concerto: '1wWMSp-kyX2K6Kk1hJfuv3gISgkoQBX4V', marce: '1M0-uSG4jsO-P6SG-MY1MoNd_aAppM8Dp'}
 };
 const LBL = {concerto: 'Brani da concerto', marce: 'Marce'};
+if (Regole.sez.ins) LBL.concerto = 'Musica d’insieme';
 const $ = s => document.querySelector(s), low = s => s.toLowerCase().trim(), pad = n => String(n).padStart(2, '0');
 const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const API = 'https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives';
@@ -125,7 +126,7 @@ const SS = {
   set: (k, v) => { try { sessionStorage.setItem(k, v); } catch (e) {} },
   del: k => { try { sessionStorage.removeItem(k); } catch (e) {} }
 };
-function connected(name) { $('#st').textContent = name ? 'Ciao ' + name : 'Connesso'; $('#st').className = 'on'; $('#login').hidden = true; start(); }
+function connected(name) { $('#st').textContent = name ? 'Ciao ' + name : 'Connesso'; $('#st').className = 'on'; $('#login').hidden = true; Regole.initSezione(CFG, g).then(start).catch(Regole.fatal); }
 function expired() { tok = null; SS.del('sess'); $('#st').textContent = 'Sessione scaduta'; $('#st').className = ''; $('#login').hidden = false; }
 $('#login').onclick = () => {
   if (!window.google) { $('#st').textContent = 'Servizio Google non raggiungibile'; return; }
@@ -171,8 +172,10 @@ async function findCfg(name) {
 const readCfg = async name => { const f = await findCfg(name); return f ? g(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media&supportsAllDrives=true`) : null; };
 async function loadOrder() {
   parent = CFG.CONFIG;
-  const f = await findCfg('ordine-strumenti.json');
-  if (f) { if (f.nuovo) orderId = f.id; return g(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media&supportsAllDrives=true`); }
+  let f = await findCfg(Regole.cfgName('ordine-strumenti.json'));
+  const proprio = !!f;
+  if (!f && Regole.sez.ins) f = await findCfg('ordine-strumenti.json');   // musica d'insieme: parte dall'ordine della banda
+  if (f) { if (f.nuovo && proprio) orderId = f.id; return g(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media&supportsAllDrives=true`); }
   try { const x = await fetch('dati/ordine-strumenti.json'); if (x.ok) return await x.json(); } catch (e) {}
   return null;
 }
@@ -180,7 +183,7 @@ async function saveOrder(nl) {
   const body = JSON.stringify(nl);
   if (orderId) return g(`https://www.googleapis.com/upload/drive/v3/files/${orderId}?uploadType=media&supportsAllDrives=true`, {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body});
   const f = new FormData();
-  f.append('metadata', new Blob([JSON.stringify({name: 'ordine-strumenti.json', parents: [parent]})], {type: 'application/json'}));
+  f.append('metadata', new Blob([JSON.stringify({name: Regole.cfgName('ordine-strumenti.json'), parents: [parent]})], {type: 'application/json'}));
   f.append('file', new Blob([body], {type: 'application/json'}));
   orderId = (await g('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id', {method: 'POST', body: f})).id;
 }
@@ -493,7 +496,7 @@ document.querySelector('main').addEventListener('click', async e => {
 });
 
 </script>
-<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F17</p>
+<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F18</p>
 <script>document.getElementById('ver').textContent += ' · regole: ' + (window.Regole && Regole.build ? Regole.build : 'vecchie o non caricate');</script>
 </body>
 </html>

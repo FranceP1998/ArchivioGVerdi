@@ -152,7 +152,7 @@ textarea{height:16rem;font-family:'Space Mono',monospace;font-size:.85rem;margin
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="regole.js?v=13"></script>
+<script src="regole.js?v=15"></script>
 <script>
 // ---- Da compilare una sola volta ----
 const CFG = {
@@ -185,7 +185,7 @@ let tok, pdf, total = 0, rows = [{n: '', a: 1, b: 1}];
 $('#ord').value = DEF.join('\n');
 const order = () => $('#ord').value.split('\n').map(s => s.trim()).filter(Boolean);
 function fillList() { $('#dl').innerHTML = [...order(), 'Partitura'].map(s => `<option value="${esc(s)}">`).join(''); }
-const CFGNAME = 'ordine-strumenti.json', msg = t => { $('#ordmsg').textContent = t; };
+const CFGNAME = Regole.cfgName('ordine-strumenti.json'), msg = t => { $('#ordmsg').textContent = t; };
 let cfgId, cfgParent;
 async function loadOrder() {
   try {
@@ -198,6 +198,13 @@ async function loadOrder() {
       msg('Ordine della banda caricato dal Drive.');
     } else {
       let b = null, fonte = 'dalla vecchia posizione sul Drive (al prossimo salvataggio passa nella cartella nuova)';
+      if (Regole.sez.ins) {   // musica d'insieme senza un ordine suo: parte da quello della banda
+        try {
+          const q2 = `'${cfgParent}' in parents and name='ordine-strumenti.json' and trashed=false`;
+          const r2 = await g(`https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives&fields=files(id)&q=${encodeURIComponent(q2)}`);
+          if (r2.files.length) { b = await g(`https://www.googleapis.com/drive/v3/files/${r2.files[0].id}?alt=media&supportsAllDrives=true`); fonte = 'dall’ordine della banda (al primo salvataggio nasce quello dell’insieme)'; }
+        } catch (e) {}
+      }
       try {   // vecchia posizione, accanto alle cartelle dei brani
         const old = (await g(`https://www.googleapis.com/drive/v3/files/${CFG.FOLDERS.concerto}?fields=parents&supportsAllDrives=true`)).parents[0], lq = `'${old}' in parents and name='${CFGNAME}' and trashed=false`;
         const lr = await g(`https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives&fields=files(id)&q=${encodeURIComponent(lq)}`);
@@ -502,7 +509,7 @@ const SS = {
 };
 function connected(name) {
   $('#st').textContent = name ? 'Ciao ' + name : 'Connesso'; $('#st').className = 'on';
-  $('#login').hidden = true; sum(); loadOrder();
+  $('#login').hidden = true; sum(); Regole.initSezione(CFG, g).then(loadOrder).catch(Regole.fatal);
 }
 function expired() {
   tok = null; SS.del('sess'); $('#st').textContent = 'Sessione scaduta'; $('#st').className = '';
@@ -578,7 +585,7 @@ $('#go').onclick = async () => {
 
 fillList(); draw();
 </script>
-<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F17</p>
+<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F18</p>
 <script>document.getElementById('ver').textContent += ' · regole: ' + (window.Regole && Regole.build ? Regole.build : 'vecchie o non caricate');</script>
 </body>
 </html>

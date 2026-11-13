@@ -68,7 +68,7 @@ a{color:var(--navy)}
 </main>
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="regole.js?v=13"></script>
+<script src="regole.js?v=15"></script>
 <script>
 const CFG = {
   CLIENT_ID: '461215269916-tcd8cfsa5m951ohohibf4f8635tdgolp.apps.googleusercontent.com',
@@ -78,6 +78,7 @@ const CFG = {
   }
 };
 const LBL = {concerto: 'Brani da concerto', marce: 'Marce'};
+if (Regole.sez.ins) LBL.concerto = 'Musica d’insieme';
 const $ = s => document.querySelector(s);
 const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -92,7 +93,7 @@ const SS = {
 };
 function connected(name) {
   $('#st').textContent = name ? 'Ciao ' + name : 'Connesso'; $('#st').className = 'on';
-  $('#login').hidden = true; load();
+  $('#login').hidden = true; Regole.initSezione(CFG, g).then(load).catch(Regole.fatal);
 }
 function expired() {
   tok = null; SS.del('sess'); $('#st').textContent = 'Sessione scaduta'; $('#st').className = '';
@@ -184,7 +185,7 @@ $('#list').addEventListener('click', async e => {
   t.disabled = false;
 });
 </script>
-<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F9</p>
+<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F18</p>
 
 </body>
 </html>

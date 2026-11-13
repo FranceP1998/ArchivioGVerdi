@@ -82,6 +82,78 @@
     }
   }
 
+  // ---- Impaginazione "2 parti A5 per foglio A4": le pagine grandi (es. la partitura in A4) restano una per foglio ----
+  const A4AREA = 595.28 * 841.89;
+  function placePair(out, a, b) {
+    const land = a.height >= a.width, W = land ? 841.89 : 595.28, H = land ? 595.28 : 841.89;   // A5 verticale: due affiancate su A4 orizzontale; A5 orizzontale: una sopra l'altra su A4 verticale
+    const pg = out.addPage([W, H]), cw = land ? W / 2 : W, ch = land ? H : H / 2;
+    [a, b].forEach((e, j) => {
+      if (!e) return;
+      const s = Math.min(cw / e.width, ch / e.height), w = e.width * s, h = e.height * s;
+      pg.drawPage(e, {x: land ? j * cw + (cw - w) / 2 : (cw - w) / 2, y: land ? (ch - h) / 2 : (j === 0 ? ch : 0) + (ch - h) / 2, width: w, height: h});
+    });
+  }
+  function sheets(out, cells) {
+    let pend = [];
+    const flush = () => { for (let i = 0; i < pend.length; i += 2) placePair(out, pend[i], pend[i + 1]); pend = []; };
+    for (const c of cells) {
+      if (c.width * c.height > 0.6 * A4AREA) { flush(); out.addPage([c.width, c.height]).drawPage(c, {x: 0, y: 0}); } // pagina grande: sola sul suo foglio, com'è
+      else pend.push(c);
+    }
+    flush();
+  }
+
+  // ---- Sezioni del sito: banda e musica d'insieme (stesso sito, dati separati) ----
+  const SEZ = {id: 'banda', ins: false};
+  try {
+    const q = new URLSearchParams(location.search).get('s');
+    if (q === 'insieme' || q === 'banda') sessionStorage.setItem('sez', q);
+    if (sessionStorage.getItem('sez') === 'insieme') { SEZ.id = 'insieme'; SEZ.ins = true; }
+  } catch (e) {}
+  // Nella musica d'insieme organico, ordine, cartellina e libretto hanno file propri ("insieme-...")
+  const cfgName = n => (SEZ.ins && /^(organico|cartellina|libretto|ordine-strumenti)\.json$/.test(n)) ? 'insieme-' + n : n;
+  const orgDefault = () => SEZ.ins ? {concerto: '', marce: ''} : ORG0;
+  let insFolder = null;
+  // Nella musica d'insieme i brani stanno nella cartella «Musica d'Insieme», accanto a «Brani da concerto»: la trova da sola
+  async function initSezione(CFG, g) {
+    if (!SEZ.ins) return;
+    try { insFolder = sessionStorage.getItem('insFolder'); } catch (e) {}
+    if (!insFolder) {
+      const parent = (await g(`https://www.googleapis.com/drive/v3/files/${CFG.FOLDERS.concerto}?fields=parents&supportsAllDrives=true`)).parents[0];
+      const q = `'${parent}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false and name contains 'nsieme'`;
+      const res = await g(`https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives&fields=files(id,name)&q=${encodeURIComponent(q)}`);
+      const f = res.files.find(x => /musica\s*d.{0,2}\s*insieme/i.test(x.name));
+      if (!f) throw new Error('Non trovo la cartella «Musica d’Insieme» accanto a «Brani da concerto».');
+      insFolder = f.id; try { sessionStorage.setItem('insFolder', insFolder); } catch (e) {}
+    }
+    CFG.FOLDERS = {concerto: insFolder};
+  }
+  function fatal(err) {
+    if (typeof document === 'undefined') return;
+    const el = document.createElement('div'); el.setAttribute('role', 'alert');
+    el.style.cssText = "position:fixed;left:1rem;right:1rem;bottom:1rem;max-width:36rem;margin:auto;background:#620E1C;color:#F6E1C9;padding:.8rem 1rem;border-radius:10px;font-family:Karla,sans-serif;z-index:60;text-align:center";
+    el.textContent = (err && err.message) || String(err); document.body.appendChild(el);
+  }
+  // Selettore della sezione in ogni pagina; nella musica d'insieme colori diversi e niente marce
+  function decora() {
+    const acc = document.querySelector('.acc'); if (!acc) return;
+    const sel = document.createElement('select'); sel.id = 'sezsel'; sel.setAttribute('aria-label', 'Sezione del sito');
+    sel.innerHTML = '<option value="banda">Banda</option><option value="insieme">Musica d’insieme</option>'; sel.value = SEZ.id;
+    sel.style.cssText = 'padding:.25rem .5rem;border:1px solid #1E1937;border-radius:6px;background:#fff;font:inherit;color:#1C1C1F';
+    sel.onchange = () => { location.href = location.pathname + '?s=' + sel.value; };
+    acc.insertBefore(sel, acc.firstChild);
+    if (!SEZ.ins) return;
+    document.querySelectorAll('.nav a').forEach(l => { l.href = l.getAttribute('href').split('?')[0] + '?s=insieme'; }); // i collegamenti del menu restano nella musica d'insieme, anche aperti in un'altra scheda
+    const st = document.createElement('style');
+    st.textContent = 'header{border-bottom-color:#008367!important}.band{background:#008367!important}.band h1,.band p{color:#fff!important}.nav a[aria-current]{border-bottom-color:#008367!important}';
+    document.head.appendChild(st); document.title = 'Musica d’insieme · ' + document.title;
+    document.querySelectorAll('option[value="marce"]').forEach(o => o.remove());
+    document.querySelectorAll('.ck[value="marce"]').forEach(c => (c.closest('label') || c).remove());
+    document.querySelectorAll('option[value="concerto"]').forEach(o => { o.textContent = 'Musica d’insieme'; });
+    document.querySelectorAll('.ck[value="concerto"]').forEach(c => { const lb = c.closest('label'); if (lb && lb.lastChild) lb.lastChild.textContent = ' Musica d’insieme'; });
+  }
+  if (typeof document !== 'undefined') { if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', decora); else decora(); }
+
   // ---- Sinonimi: "Flute" -> "flauto", "Sib" -> "bb", ... (parole intere, vince la frase più lunga) ----
   const SYN0 = [
     ['flute', 'flauto'], ['piccolo', 'ottavino'], ['clarinet', 'clarinetto'], ['cl', 'clarinetto'],
@@ -234,5 +306,5 @@
     return a ? parts.find(p => low(p.name) === a.part) : null;
   }
 
-  (typeof window !== 'undefined' ? window : globalThis).Regole = {build: 'F9', fetchRetry, stripTitle, kindOf, parseFile, retitle, ORG0, KW0, SYN0, applySyn, setSynonyms, getSynonyms: () => SYN, parseOrg, parsePart, calc, partFor, percKey, ordKey, setKeywords, getKeywords: () => KW, norm};
+  (typeof window !== 'undefined' ? window : globalThis).Regole = {build: 'F18', sez: SEZ, cfgName, orgDefault, initSezione, fatal, fetchRetry, sheets, stripTitle, kindOf, parseFile, retitle, ORG0, KW0, SYN0, applySyn, setSynonyms, getSynonyms: () => SYN, parseOrg, parsePart, calc, partFor, percKey, ordKey, setKeywords, getKeywords: () => KW, norm};
 })();
