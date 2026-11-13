@@ -89,6 +89,7 @@ select:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
 <script src="regole.js?v=13"></script>
 <script>
 const CFG = {
+  CONFIG: '1uJBiDObTRveMB0v3jr43iYJEWiBQIfsP', // cartella dei file di configurazione (organico, ordine, cartellina...)
   CLIENT_ID: '461215269916-tcd8cfsa5m951ohohibf4f8635tdgolp.apps.googleusercontent.com',
   FOLDERS: {concerto: '1wWMSp-kyX2K6Kk1hJfuv3gISgkoQBX4V', marce: '1M0-uSG4jsO-P6SG-MY1MoNd_aAppM8Dp'}
 };
@@ -133,14 +134,22 @@ try { const s0 = JSON.parse(SS.get('sess')); if (s0 && s0.e > Date.now()) { tok 
 // ---- File di configurazione sul Drive (con copia di sicurezza su GitHub in dati/) ----
 const CF = {}; let parent;
 async function parentId() {
-  if (!parent) parent = (await g(`https://www.googleapis.com/drive/v3/files/${CFG.FOLDERS.concerto}?fields=parents&supportsAllDrives=true`)).parents[0];
+  if (!parent) parent = CFG.CONFIG;
   return parent;
 }
 async function backup(name) { try { const x = await fetch('dati/' + name); if (x.ok) return await x.json(); } catch (e) {} return null; }
 async function loadCfg(name) {
   const q = `'${await parentId()}' in parents and name='${name}' and trashed=false`;
   const r = await g(`${API}&fields=files(id)&q=${encodeURIComponent(q)}`);
-  if (!r.files.length) return backup(name);
+  if (!r.files.length) {
+    // vecchia posizione (accanto alle cartelle dei brani): si legge da lì, e al prossimo salvataggio il file nasce nella cartella nuova
+    try {
+      const old = (await g(`https://www.googleapis.com/drive/v3/files/${CFG.FOLDERS.concerto}?fields=parents&supportsAllDrives=true`)).parents[0], lq = `'${old}' in parents and name='${name}' and trashed=false`;
+      const lr = await g(`${API}&fields=files(id)&q=${encodeURIComponent(lq)}`);
+      if (lr.files.length) return g(`https://www.googleapis.com/drive/v3/files/${lr.files[0].id}?alt=media&supportsAllDrives=true`);
+    } catch (e) {}
+    return backup(name);
+  }
   CF[name] = r.files[0].id;
   return g(`https://www.googleapis.com/drive/v3/files/${CF[name]}?alt=media&supportsAllDrives=true`);
 }
@@ -227,7 +236,7 @@ $('#save').onclick = async () => {
 };
 render();
 </script>
-<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F9</p>
+<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F17</p>
 <script>document.getElementById('ver').textContent += ' · regole: ' + (window.Regole && Regole.build ? Regole.build : 'vecchie o non caricate');</script>
 </body>
 </html>

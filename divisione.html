@@ -156,6 +156,7 @@ textarea{height:16rem;font-family:'Space Mono',monospace;font-size:.85rem;margin
 <script>
 // ---- Da compilare una sola volta ----
 const CFG = {
+  CONFIG: '1uJBiDObTRveMB0v3jr43iYJEWiBQIfsP', // cartella dei file di configurazione (organico, ordine, cartellina...)
   CLIENT_ID: '461215269916-tcd8cfsa5m951ohohibf4f8635tdgolp.apps.googleusercontent.com',
   FOLDERS: {
     concerto: '1wWMSp-kyX2K6Kk1hJfuv3gISgkoQBX4V',
@@ -188,7 +189,7 @@ const CFGNAME = 'ordine-strumenti.json', msg = t => { $('#ordmsg').textContent =
 let cfgId, cfgParent;
 async function loadOrder() {
   try {
-    cfgParent = (await g(`https://www.googleapis.com/drive/v3/files/${CFG.FOLDERS.concerto}?fields=parents&supportsAllDrives=true`)).parents[0];
+    cfgParent = CFG.CONFIG;
     const q = `'${cfgParent}' in parents and name='${CFGNAME}' and trashed=false`;
     const r = await g(`https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives&fields=files(id)&q=${encodeURIComponent(q)}`);
     if (r.files.length) {
@@ -196,15 +197,23 @@ async function loadOrder() {
       $('#ord').value = (await g(`https://www.googleapis.com/drive/v3/files/${cfgId}?alt=media&supportsAllDrives=true`)).join('\n');
       msg('Ordine della banda caricato dal Drive.');
     } else {
-      let b = null; try { const x = await fetch('dati/ordine-strumenti.json'); if (x.ok) b = await x.json(); } catch (e) {}
-      if (b) { $('#ord').value = b.join('\n'); msg('Ordine caricato dalla copia di sicurezza su GitHub (sul Drive non c’è).'); }
+      let b = null, fonte = 'dalla vecchia posizione sul Drive (al prossimo salvataggio passa nella cartella nuova)';
+      try {   // vecchia posizione, accanto alle cartelle dei brani
+        const old = (await g(`https://www.googleapis.com/drive/v3/files/${CFG.FOLDERS.concerto}?fields=parents&supportsAllDrives=true`)).parents[0], lq = `'${old}' in parents and name='${CFGNAME}' and trashed=false`;
+        const lr = await g(`https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives&fields=files(id)&q=${encodeURIComponent(lq)}`);
+        if (lr.files.length) b = await g(`https://www.googleapis.com/drive/v3/files/${lr.files[0].id}?alt=media&supportsAllDrives=true`);
+      } catch (e) {}
+      if (!b) { fonte = 'dalla copia di sicurezza su GitHub (sul Drive non c’è)'; try { const x = await fetch('dati/ordine-strumenti.json'); if (x.ok) b = await x.json(); } catch (e) {} }
+      if (b) { $('#ord').value = b.join('\n'); msg('Ordine caricato ' + fonte + '.'); }
       else msg('Nessun ordine salvato sul Drive: è quello predefinito.');
     }
   } catch (e) { msg('Non riesco a leggere l’ordine dal Drive: ' + e.message); }
-  try {
-    const kq = `'${cfgParent}' in parents and name='percussioni-parole.json' and trashed=false`;
-    const kr = await g(`https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives&fields=files(id)&q=${encodeURIComponent(kq)}`);
-    if (kr.files.length) Regole.setKeywords(await g(`https://www.googleapis.com/drive/v3/files/${kr.files[0].id}?alt=media&supportsAllDrives=true`));
+  try {   // parole chiave delle percussioni: cartella nuova, poi vecchia posizione
+    for (const pid of [cfgParent, (await g(`https://www.googleapis.com/drive/v3/files/${CFG.FOLDERS.concerto}?fields=parents&supportsAllDrives=true`)).parents[0]]) {
+      const kq = `'${pid}' in parents and name='percussioni-parole.json' and trashed=false`;
+      const kr = await g(`https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives&fields=files(id)&q=${encodeURIComponent(kq)}`);
+      if (kr.files.length) { Regole.setKeywords(await g(`https://www.googleapis.com/drive/v3/files/${kr.files[0].id}?alt=media&supportsAllDrives=true`)); break; }
+    }
   } catch (e) {}
   fillList(); sum();
 }
@@ -569,7 +578,7 @@ $('#go').onclick = async () => {
 
 fillList(); draw();
 </script>
-<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F15</p>
+<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F17</p>
 <script>document.getElementById('ver').textContent += ' · regole: ' + (window.Regole && Regole.build ? Regole.build : 'vecchie o non caricate');</script>
 </body>
 </html>

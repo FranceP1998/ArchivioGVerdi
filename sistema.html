@@ -109,6 +109,7 @@ pre{white-space:pre-wrap;margin:.75rem 0 0}
 <script src="regole.js?v=13"></script>
 <script>
 const CFG = {
+  CONFIG: '1uJBiDObTRveMB0v3jr43iYJEWiBQIfsP', // cartella dei file di configurazione (organico, ordine, cartellina...)
   CLIENT_ID: '461215269916-tcd8cfsa5m951ohohibf4f8635tdgolp.apps.googleusercontent.com',
   FOLDERS: {concerto: '1wWMSp-kyX2K6Kk1hJfuv3gISgkoQBX4V', marce: '1M0-uSG4jsO-P6SG-MY1MoNd_aAppM8Dp'}
 };
@@ -159,13 +160,21 @@ const DEF = ['Ottavino', 'Ottavino e Flauto', 'Ottavino e Flauto 1', ...N('Flaut
   ...T('Corno', ['1','2','3','4',''], ['F','Eb','Bb']), 'Eufonio in C BC', 'Eufonio in Bb TC', 'Eufonio in C TC', 'Eufonio in Bb BC',
   ...T('Trombone', ['1','2','3','Basso',''], TON), ...T('Tuba', ['1','2','1 e 2',''], TON), 'Contrabbasso', 'Pianoforte', 'Percussioni'];
 let parent, orderId;
+// Legge un file di configurazione: prima dalla cartella dedicata, poi dalla vecchia posizione (accanto alle cartelle dei brani)
+async function findCfg(name) {
+  const find = async pid => (await g(`${API}&fields=files(id)&q=${encodeURIComponent(`'${pid}' in parents and name='${name}' and trashed=false`)}`)).files;
+  let r = await find(CFG.CONFIG);
+  if (r.length) return {id: r[0].id, nuovo: true};
+  try { r = await find((await g(`https://www.googleapis.com/drive/v3/files/${CFG.FOLDERS.concerto}?fields=parents&supportsAllDrives=true`)).parents[0]); if (r.length) return {id: r[0].id, nuovo: false}; } catch (e) {}
+  return null;
+}
+const readCfg = async name => { const f = await findCfg(name); return f ? g(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media&supportsAllDrives=true`) : null; };
 async function loadOrder() {
-  parent = (await g(`https://www.googleapis.com/drive/v3/files/${CFG.FOLDERS.concerto}?fields=parents&supportsAllDrives=true`)).parents[0];
-  const q = `'${parent}' in parents and name='ordine-strumenti.json' and trashed=false`;
-  const r = await g(`${API}&fields=files(id)&q=${encodeURIComponent(q)}`);
-  if (!r.files.length) { try { const x = await fetch('dati/ordine-strumenti.json'); if (x.ok) return await x.json(); } catch (e) {} return null; }
-  orderId = r.files[0].id;
-  return g(`https://www.googleapis.com/drive/v3/files/${orderId}?alt=media&supportsAllDrives=true`);
+  parent = CFG.CONFIG;
+  const f = await findCfg('ordine-strumenti.json');
+  if (f) { if (f.nuovo) orderId = f.id; return g(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media&supportsAllDrives=true`); }
+  try { const x = await fetch('dati/ordine-strumenti.json'); if (x.ok) return await x.json(); } catch (e) {}
+  return null;
 }
 async function saveOrder(nl) {
   const body = JSON.stringify(nl);
@@ -180,11 +189,7 @@ async function start() {
   $('#pg').textContent = 'Carico ordine e brani…';
   try {
     L = (await loadOrder()) || DEF; brani = [];
-    try {
-      const kq = `'${parent}' in parents and name='percussioni-parole.json' and trashed=false`;
-      const kr = await g(`${API}&fields=files(id)&q=${encodeURIComponent(kq)}`);
-      if (kr.files.length) Regole.setKeywords(await g(`https://www.googleapis.com/drive/v3/files/${kr.files[0].id}?alt=media&supportsAllDrives=true`));
-    } catch (e) {}
+    try { const kw = await readCfg('percussioni-parole.json'); if (kw) Regole.setKeywords(kw); } catch (e) {}
     for (const k of Object.keys(CFG.FOLDERS)) {
       let pt = '';
       do {
@@ -488,7 +493,7 @@ document.querySelector('main').addEventListener('click', async e => {
 });
 
 </script>
-<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F9</p>
+<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F17</p>
 <script>document.getElementById('ver').textContent += ' · regole: ' + (window.Regole && Regole.build ? Regole.build : 'vecchie o non caricate');</script>
 </body>
 </html>
