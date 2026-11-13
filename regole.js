@@ -113,20 +113,9 @@
   // Nella musica d'insieme organico, ordine, cartellina e libretto hanno file propri ("insieme-...")
   const cfgName = n => (SEZ.ins && /^(organico|cartellina|libretto|ordine-strumenti)\.json$/.test(n)) ? 'insieme-' + n : n;
   const orgDefault = () => SEZ.ins ? {concerto: '', marce: ''} : ORG0;
-  let insFolder = null;
-  // Nella musica d'insieme i brani stanno nella cartella «Musica d'Insieme», accanto a «Brani da concerto»: la trova da sola
-  async function initSezione(CFG, g) {
-    if (!SEZ.ins) return;
-    try { insFolder = sessionStorage.getItem('insFolder'); } catch (e) {}
-    if (!insFolder) {
-      const parent = (await g(`https://www.googleapis.com/drive/v3/files/${CFG.FOLDERS.concerto}?fields=parents&supportsAllDrives=true`)).parents[0];
-      const q = `'${parent}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false and name contains 'nsieme'`;
-      const res = await g(`https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives&fields=files(id,name)&q=${encodeURIComponent(q)}`);
-      const f = res.files.find(x => /musica\s*d.{0,2}\s*insieme/i.test(x.name));
-      if (!f) throw new Error('Non trovo la cartella «Musica d’Insieme» accanto a «Brani da concerto».');
-      insFolder = f.id; try { sessionStorage.setItem('insFolder', insFolder); } catch (e) {}
-    }
-    CFG.FOLDERS = {concerto: insFolder};
+  const INS_FOLDER = '151jnRd-VyO5U8ne8Xbx7WMsH0H37HpHK'; // cartella «Musica d'Insieme» (contiene una cartella per ogni brano, come per la banda)
+  async function initSezione(CFG) {
+    if (SEZ.ins) CFG.FOLDERS = {concerto: INS_FOLDER};
   }
   function fatal(err) {
     if (typeof document === 'undefined') return;
@@ -306,5 +295,5 @@
     return a ? parts.find(p => low(p.name) === a.part) : null;
   }
 
-  (typeof window !== 'undefined' ? window : globalThis).Regole = {build: 'F18', sez: SEZ, cfgName, orgDefault, initSezione, fatal, fetchRetry, sheets, stripTitle, kindOf, parseFile, retitle, ORG0, KW0, SYN0, applySyn, setSynonyms, getSynonyms: () => SYN, parseOrg, parsePart, calc, partFor, percKey, ordKey, setKeywords, getKeywords: () => KW, norm};
+  (typeof window !== 'undefined' ? window : globalThis).Regole = {build: 'F19', sez: SEZ, cfgName, orgDefault, initSezione, fatal, fetchRetry, sheets, stripTitle, kindOf, parseFile, retitle, ORG0, KW0, SYN0, applySyn, setSynonyms, getSynonyms: () => SYN, parseOrg, parsePart, calc, partFor, percKey, ordKey, setKeywords, getKeywords: () => KW, norm};
 })();
