@@ -3,6 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="icone/favicon.svg" type="image/svg+xml" id="ico">
+<link rel="icon" href="icone/favicon-32.png" sizes="32x32" type="image/png" id="ico32">
+<link rel="shortcut icon" href="icone/favicon.ico">
+<link rel="apple-touch-icon" href="icone/apple-touch-icon.png" id="ico180">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1E1937">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Archivio Verdi">
 <title>Aggiungi brano · Archivio spartiti</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Karla:wght@400;600&family=Piazzolla:wght@500;700&family=Space+Mono&display=swap">
 <style>
@@ -117,6 +126,7 @@ textarea{height:16rem;font-family:'Space Mono',monospace;font-size:.85rem;margin
 
     <div id="mo" hidden>
       <label class="inc"><input type="checkbox" id="a5" checked> Marcia: dividi ogni foglio in due parti A5</label>
+      <label class="inc"><input type="checkbox" id="nob" checked> Ignora le metà completamente bianche (non entrano nell'elenco delle pagine; se c'è anche solo un segno restano)</label>
       <label class="inc" for="ns">Fogli da non dividere (per esempio la partitura A4 nello stesso PDF)<input id="ns" placeholder="per esempio 1-8"></label>
       <label class="inc"><input type="checkbox" id="orig"> Mostra i fogli originali (solo per guardare; le pagine da inserire restano quelle del PDF diviso)</label>
       <div class="inc" id="cutrow">Riquadri A5: <b id="cutval">centrati nelle due metà</b> <button type="button" id="cutbtn">Imposta i riquadri A5 sulle pagine</button></div>
@@ -152,7 +162,7 @@ textarea{height:16rem;font-family:'Space Mono',monospace;font-size:.85rem;margin
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="regole.js?v=15"></script>
+<script src="regole.js?v=16"></script>
 <script>
 // ---- Da compilare una sola volta ----
 const CFG = {
@@ -374,8 +384,15 @@ async function rebuild() {
   if ($('#cat').value === 'marce' && $('#a5').checked) {
     $('#tot').textContent = 'Divido i fogli in due parti…';
     const m = await PDFLib.PDFDocument.load(bytes, {ignoreEncryption: true}), h = await halves(m, $('#dir').value, parseSkip($('#ns').value), cfg);
+    let nBlank = [];
+    if ($('#nob').checked) {
+      $('#tot').textContent = 'Cerco le metà bianche…';
+      nBlank = await findBlank(await h.save(), h.__meta);
+      for (const i of [...nBlank].sort((a, b) => b - a)) h.removePage(i);
+    }
     bytes = await h.save();
     note = ` · da ${m.getPageCount()} fogli a ${h.getPageCount()} pagine`;
+    if (nBlank.length) note += ` · ${nBlank.length} ${nBlank.length === 1 ? 'metà bianca ignorata' : 'metà bianche ignorate'} (${blankList(nBlank, h.__meta)})`;
   }
   procBytes = bytes;
   pdf = await PDFLib.PDFDocument.load(bytes, {ignoreEncryption: true});
@@ -409,18 +426,44 @@ function boxDims(w, h, dir, pct) {
   return {W: H * ar, H};
 }
 async function halves(m, dir, skip, c = cfg) {
-  const out = await PDFLib.PDFDocument.create();
+  const out = await PDFLib.PDFDocument.create(); out.__meta = [];   // per ogni pagina creata: foglio di origine, lato, e se è una metà (solo queste possono essere scartate se bianche)
   for (const [pi, p] of m.getPages().entries()) {
-    if (skip.has(pi + 1)) { const [cp] = await out.copyPages(m, [pi]); out.addPage(cp); continue; }
+    if (skip.has(pi + 1)) { const [cp] = await out.copyPages(m, [pi]); out.addPage(cp); out.__meta.push({sheet: pi + 1, half: false}); continue; }
     const b = p.getMediaBox(), w = b.width, h = b.height, side = dir === 'auto' ? (w >= h ? 'lr' : 'tb') : dir;
     const {W, H} = boxDims(w, h, side, c.pct), pos = side === c.dir ? c.pos : defPos(side), [ow, oh] = side === 'lr' ? [A5.w, A5.h] : [A5.h, A5.w];
-    for (const q of pos) {
+    for (const [qi, q] of pos.entries()) {
+      out.__meta.push({sheet: pi + 1, half: true, side: qi, dir: side});
       const left = Math.min(b.x + w - W, Math.max(b.x, b.x + q.x * w - W / 2)), bottom = Math.min(b.y + h - H, Math.max(b.y, b.y + h - q.y * h - H / 2));
       const e = await out.embedPage(p, {left, right: left + W, bottom, top: bottom + H}), np = out.addPage([ow, oh]);   // ogni parte diventa una pagina A5 esatta
       np.drawPage(e, {x: 0, y: 0, width: ow, height: oh});
     }
   }
   return out;
+}
+// Metà "assolutamente bianche": si disegna la pagina e si guarda ogni pixel. Basta UN pixel appena più scuro del bianco puro (sotto 252 su 255 in un canale)
+// perché la pagina resti. Per questo un foglio scansionato con fondo leggermente grigio o con polvere non viene mai scartato per sbaglio: al massimo resta.
+const WHITE_MIN = 252;
+async function findBlank(bytes, meta) {
+  const doc = await pdfjsLib.getDocument({data: new Uint8Array(bytes.slice(0))}).promise, blank = [], cv = document.createElement('canvas'), ctx = cv.getContext('2d', {willReadFrequently: true});
+  for (let i = 1; i <= doc.numPages; i++) {
+    if (!meta[i - 1] || !meta[i - 1].half) continue;
+    const pg = await doc.getPage(i), vp = pg.getViewport({scale: 1.5});          // circa 110 dpi: anche una riga sottilissima lascia un pixel più scuro
+    cv.width = Math.ceil(vp.width); cv.height = Math.ceil(vp.height);
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+    await pg.render({canvasContext: ctx, viewport: vp}).promise;
+    const d = ctx.getImageData(0, 0, cv.width, cv.height).data; let ink = false;
+    for (let k = 0; k < d.length; k += 4) if (d[k] < WHITE_MIN || d[k + 1] < WHITE_MIN || d[k + 2] < WHITE_MIN) { ink = true; break; }
+    if (!ink) blank.push(i - 1);
+    pg.cleanup();
+  }
+  try { await doc.destroy(); } catch (e) {}
+  return blank;
+}
+// Elenco leggibile delle metà ignorate, per esempio "foglio 3 a destra, foglio 5 a sinistra"
+function blankList(idx, meta) {
+  const nm = x => x.dir === 'lr' ? (x.side ? 'destra' : 'sinistra') : (x.side ? 'in basso' : 'in alto'), all = idx.map(i => meta[i]);
+  const t = all.slice(0, 6).map(x => `foglio ${x.sheet} ${nm(x)}`).join(', ');
+  return t + (all.length > 6 ? ` e altre ${all.length - 6}` : '');
 }
 // ---- Riquadri A5: tutti i fogli sovrapposti e due riquadri da trascinare ----
 let cutOpen = false, cutSig = '', tdeb = null, cutDim = {w: 1, h: 1}, boxDrag = null;
@@ -493,6 +536,7 @@ $('#cutok').onclick = () => showCut(false);
 const again = () => { if (srcs.length) rebuild().catch(e => { $('#tot').textContent = 'Impossibile elaborare i PDF: ' + e.message; }); };
 $('#cat').onchange = () => { $('#mo').hidden = $('#cat').value !== 'marce'; again(); };
 $('#a5').onchange = () => { $('#cutrow').hidden = !$('#a5').checked; again(); };
+$('#nob').onchange = again;
 $('#dir').onchange = $('#ns').onchange = () => { again(); if (cutOpen) renderCut().catch(() => {}); };
 $('#orig').onchange = () => { if (procBytes) openViewer(($('#orig').checked ? origBytes : procBytes).slice(0)); };
 async function cut(a, b) {
@@ -585,7 +629,7 @@ $('#go').onclick = async () => {
 
 fillList(); draw();
 </script>
-<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F18</p>
+<p class="ver" id="ver" style="text-align:center;font-family:'Space Mono',monospace;font-size:.75rem;margin:0;padding:1rem 0 2rem">Versione pagina: build F20</p>
 <script>document.getElementById('ver').textContent += ' · regole: ' + (window.Regole && Regole.build ? Regole.build : 'vecchie o non caricate');</script>
 </body>
 </html>

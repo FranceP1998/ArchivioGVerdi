@@ -1,0 +1,16 @@
+{
+  "name": "Archivio spartiti - Corpo Musicale G. Verdi",
+  "short_name": "Archivio Verdi",
+  "description": "Archivio degli spartiti del Corpo Musicale G. Verdi di Venaria Reale",
+  "start_url": "./archivio.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F6E1C9",
+  "theme_color": "#1E1937",
+  "lang": "it",
+  "icons": [
+    {"src": "icone/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icone/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icone/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
